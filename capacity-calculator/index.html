@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capacity Case Calculator — Secure Culture Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #13131f;
+    --surface:   #1c1c2e;
+    --card:      #22223a;
+    --card-hi:   #2a2a46;
+    --purple:    #7b6ef6;
+    --purple-lt: #a99ef8;
+    --purple-dim:#2e2a5a;
+    --accent:    #9d8ff7;
+    --ink:       #f0efff;
+    --mid:       #c4c0dc;
+    --muted:     #9490b0;
+    --rule:      #2e2e4a;
+    --green:     #3dab7a;
+    --radius:    10px;
+  }
+
+  [data-theme="light"] {
+    --bg:        #f4f4fb;
+    --surface:   #ffffff;
+    --card:      #f0f0f8;
+    --card-hi:   #e8e8f4;
+    --purple:    #6b5fe0;
+    --purple-lt: #5548c8;
+    --purple-dim:#ebe8fd;
+    --accent:    #7b6ef6;
+    --ink:       #1a1a2e;
+    --mid:       #3a3a5a;
+    --muted:     #7070a0;
+    --rule:      #dcdce8;
+    --green:     #1a7a4a;
+  }
+
+  .theme-toggle {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 20px;
+    padding: 5px 12px 5px 8px; cursor: pointer; display: flex; align-items: center;
+    gap: 6px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500;
+    color: var(--muted); transition: all 0.15s; white-space: nowrap;
+  }
+  .theme-toggle:hover { border-color: var(--purple); color: var(--ink); }
+  .theme-toggle svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  a { color: var(--purple-lt); text-decoration: none; }
+  a:hover { color: var(--ink); text-decoration: underline; }
+
+  /* ── Nav ── */
+  nav {
+    background: var(--surface); border-bottom: 1px solid var(--rule);
+    padding: 16px 32px; display: flex; align-items: center;
+    justify-content: space-between; position: sticky; top: 0; z-index: 10;
+  }
+  .nav-brand {
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .nav-brand span {
+    color: var(--purple-lt); font-family: 'DM Mono', monospace; font-size: 11px;
+    background: var(--purple-dim); border: 1px solid var(--purple);
+    padding: 2px 10px; border-radius: 20px;
+  }
+  .nav-cta {
+    background: var(--purple); color: #fff; font-size: 13px; font-weight: 500;
+    padding: 8px 18px; border-radius: 8px; text-decoration: none;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .nav-cta:hover { background: var(--accent); color: #fff; text-decoration: none; transform: translateY(-1px); }
+
+  /* ── Hero ── */
+  .hero {
+    max-width: 760px; margin: 0 auto; padding: 80px 32px 64px; text-align: center;
+  }
+  .hero-eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--purple-lt); margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 52px); font-weight: 600; letter-spacing: -0.03em;
+    line-height: 1.1; color: var(--ink); margin-bottom: 24px;
+  }
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--purple) 0%, var(--purple-lt) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .hero-sub {
+    font-size: 18px; font-weight: 300; color: var(--mid);
+    max-width: 560px; margin: 0 auto 40px;
+  }
+  .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn-primary {
+    background: var(--purple); color: #fff; font-size: 15px; font-weight: 500;
+    padding: 14px 28px; border-radius: 10px; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-primary:hover { background: var(--accent); color: #fff; text-decoration: none; transform: translateY(-2px); }
+  .btn-ghost {
+    background: transparent; color: var(--mid); font-size: 15px; font-weight: 400;
+    padding: 14px 28px; border-radius: 10px; border: 1px solid var(--rule);
+    text-decoration: none; transition: border-color 0.15s, color 0.15s;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .btn-ghost:hover { border-color: var(--purple); color: var(--ink); text-decoration: none; }
+
+  /* ── Preview ── */
+  .preview-wrap { max-width: 900px; margin: 0 auto 80px; padding: 0 32px; }
+  .preview-frame {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 14px;
+    overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  }
+  .preview-bar {
+    background: var(--card); border-bottom: 1px solid var(--rule);
+    padding: 12px 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .preview-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .preview-url { margin-left: 8px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+  .preview-inner {
+    padding: 28px; display: grid; grid-template-columns: 220px 1fr;
+    gap: 20px; min-height: 280px;
+  }
+  .preview-left {
+    background: var(--card); border-radius: 10px; border: 1px solid var(--rule); padding: 18px 16px;
+  }
+  .preview-section-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+  }
+  .preview-cat { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .preview-swatch { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .preview-cat-label { font-size: 11px; color: var(--mid); flex: 1; }
+  .preview-hrs { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-right: 3px; }
+  .preview-cat-pct { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--purple-lt); }
+  .preview-right { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .preview-chart-card {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 14px 12px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .preview-chart-title {
+    font-size: 10px; font-weight: 500; color: var(--muted);
+    text-align: center; letter-spacing: 0.03em; align-self: flex-start;
+  }
+  .preview-donut { width: 72px; height: 72px; }
+
+  /* ── Content ── */
+  .content { max-width: 760px; margin: 0 auto; padding: 0 32px 80px; }
+  .section { margin-bottom: 64px; }
+  .section-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--purple-lt); margin-bottom: 16px;
+  }
+  h2 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin-bottom: 16px; }
+  p { color: var(--mid); margin-bottom: 14px; }
+  p:last-child { margin-bottom: 0; }
+
+  /* ── Feature grid ── */
+  .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 24px; }
+  .feature-card {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .feature-icon { font-size: 22px; margin-bottom: 10px; }
+  .feature-card h3 { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+  .feature-card p { font-size: 13px; color: var(--muted); margin: 0; }
+
+  /* ── Use cases ── */
+  .use-cases { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 24px; }
+  .use-case {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .use-case-icon { font-size: 22px; margin-bottom: 10px; }
+  .use-case h3 { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+  .use-case p { font-size: 13px; color: var(--muted); margin: 0; }
+
+  /* ── Steps ── */
+  .steps { margin-top: 24px; }
+  .step { display: flex; gap: 18px; margin-bottom: 22px; align-items: flex-start; }
+  .step-num {
+    font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+    color: var(--purple-lt); background: var(--purple-dim); border: 1px solid var(--purple);
+    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; margin-top: 2px;
+  }
+  .step-body h3 { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .step-body p { font-size: 14px; color: var(--muted); margin: 0; }
+
+  /* ── Pill list ── */
+  .pill-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .pill {
+    font-size: 12px; font-weight: 500; color: var(--purple-lt); background: var(--purple-dim);
+    border: 1px solid rgba(123,110,246,0.3); padding: 5px 12px; border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── CTA block ── */
+  .cta-block {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 14px; padding: 40px 36px; text-align: center;
+  }
+  .cta-block h2 { margin-bottom: 12px; }
+  .cta-block p { max-width: 480px; margin: 0 auto 28px; }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--rule); padding: 24px 32px;
+    text-align: center; font-size: 12px; color: var(--muted);
+  }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--purple-lt); }
+
+  @media (max-width: 600px) {
+    .hero { padding: 48px 20px 40px; }
+    .preview-wrap { padding: 0 20px; }
+    .content { padding: 0 20px 60px; }
+    .preview-inner { grid-template-columns: 1fr; }
+    .preview-left { display: none; }
+    .use-cases, .feature-grid { grid-template-columns: 1fr; }
+    nav { padding: 14px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    Secure Culture Hub
+    <span>Free tool</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">
+      <svg id="theme-icon" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.3"/>
+        <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+      <span id="theme-label">Light mode</span>
+    </button>
+    <a href="capacity-case-calculator.html" id="nav-cta" class="nav-cta">Open calculator →</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <p class="hero-eyebrow">Secure Culture Hub — Practitioner Tools</p>
+  <h1>Make the case for <em>more capacity</em></h1>
+  <p class="hero-sub">A free, browser-based tool to map where your hours are actually going — and show exactly what changes when your team grows.</p>
+  <div class="hero-actions">
+    <a href="capacity-case-calculator.html" class="btn-primary" id="hero-cta">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1v9M5 7l3 3 3-3" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12v2h12v-2" stroke="white" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Open the calculator
+    </a>
+    <a href="capacity-case-calculator.html?wizard=true" class="btn-ghost" id="hero-wiz">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1l1.8 3.6L14 5.6l-3 2.9.7 4.1L8 10.5 4.3 12.6l.7-4.1-3-2.9 4.2-.6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      Start guided setup
+    </a>
+    <a href="#how-it-works" class="btn-ghost">How it works</a>
+  </div>
+</section>
+
+<!-- Preview mockup -->
+<div class="preview-wrap">
+  <div class="preview-frame">
+    <div class="preview-bar">
+      <div class="preview-dot" style="background:#e05252"></div>
+      <div class="preview-dot" style="background:#e07b39"></div>
+      <div class="preview-dot" style="background:#3dab7a"></div>
+      <span class="preview-url">capacity-case-calculator.html</span>
+    </div>
+    <div class="preview-inner">
+      <div class="preview-left">
+        <div class="preview-section-label">Your time now — 37 hrs/week</div>
+        <div class="preview-cat"><div class="preview-swatch" style="background:#7b6ef6"></div><span class="preview-cat-label">Phishing simulation</span><span class="preview-hrs">4h</span><span class="preview-cat-pct">11%</span></div>
+        <div class="preview-cat"><div class="preview-swatch" style="background:#3dab7a"></div><span class="preview-cat-label">Content creation</span><span class="preview-hrs">6h</span><span class="preview-cat-pct">16%</span></div>
+        <div class="preview-cat"><div class="preview-swatch" style="background:#e07b39"></div><span class="preview-cat-label">Comms writing</span><span class="preview-hrs">4h</span><span class="preview-cat-pct">11%</span></div>
+        <div class="preview-cat"><div class="preview-swatch" style="background:#e05252"></div><span class="preview-cat-label">Meetings & stakeholders</span><span class="preview-hrs">5h</span><span class="preview-cat-pct">14%</span></div>
+        <div class="preview-cat"><div class="preview-swatch" style="background:#54b8e8"></div><span class="preview-cat-label">Reporting & metrics</span><span class="preview-hrs">3h</span><span class="preview-cat-pct">8%</span></div>
+        <div class="preview-cat"><div class="preview-swatch" style="background:#d4a843"></div><span class="preview-cat-label">Reactive & unplanned</span><span class="preview-hrs">5h</span><span class="preview-cat-pct">14%</span></div>
+      </div>
+      <div class="preview-right">
+        <div class="preview-chart-card">
+          <div class="preview-chart-title">Your time now</div>
+          <svg class="preview-donut" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#7b6ef6" stroke-width="13" stroke-dasharray="23.7 209.7" stroke-dashoffset="53.4"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#3dab7a" stroke-width="13" stroke-dasharray="33.6 199.8" stroke-dashoffset="30.3"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#e07b39" stroke-width="13" stroke-dasharray="23.7 209.7" stroke-dashoffset="-3.3"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#e05252" stroke-width="13" stroke-dasharray="29.5 203.9" stroke-dashoffset="-27"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#54b8e8" stroke-width="13" stroke-dasharray="17.7 215.7" stroke-dashoffset="-56.5"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#d4a843" stroke-width="13" stroke-dasharray="29.5 203.9" stroke-dashoffset="-74.2"/>
+            <circle cx="40" cy="40" r="26" fill="#22223a"/>
+            <text x="40" y="44" text-anchor="middle" font-family="DM Mono, monospace" font-size="10" fill="#3dab7a">37h</text>
+          </svg>
+        </div>
+        <div class="preview-chart-card">
+          <div class="preview-chart-title">You after</div>
+          <svg class="preview-donut" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#7b6ef6" stroke-width="13" stroke-dasharray="11.8 211.6" stroke-dashoffset="53.4"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#3dab7a" stroke-width="13" stroke-dasharray="17.7 205.7" stroke-dashoffset="41.6"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#e07b39" stroke-width="13" stroke-dasharray="35.4 197.6" stroke-dashoffset="23.9"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#e05252" stroke-width="13" stroke-dasharray="35.4 197.6" stroke-dashoffset="-11.5"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#54b8e8" stroke-width="13" stroke-dasharray="29.5 203.9" stroke-dashoffset="-46.9"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#d4a843" stroke-width="13" stroke-dasharray="23.7 209.7" stroke-dashoffset="-76.4"/>
+            <circle cx="40" cy="40" r="26" fill="#22223a"/>
+            <text x="40" y="44" text-anchor="middle" font-family="DM Mono, monospace" font-size="10" fill="#3dab7a">37h</text>
+          </svg>
+        </div>
+        <div class="preview-chart-card">
+          <div class="preview-chart-title">New hire</div>
+          <svg class="preview-donut" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#7b6ef6" stroke-width="13" stroke-dasharray="47.1 186.3" stroke-dashoffset="53.4"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#3dab7a" stroke-width="13" stroke-dasharray="53.1 180.3" stroke-dashoffset="6.3"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#e07b39" stroke-width="13" stroke-dasharray="35.4 197.6" stroke-dashoffset="-46.8"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#e05252" stroke-width="13" stroke-dasharray="23.7 209.7" stroke-dashoffset="-82.2"/>
+            <circle cx="40" cy="40" r="26" fill="#22223a"/>
+            <text x="40" y="44" text-anchor="middle" font-family="DM Mono, monospace" font-size="10" fill="#3dab7a">37h</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+  <section class="section">
+    <p class="section-label">What it is</p>
+    <h2>Built for the headcount conversation</h2>
+    <p>Most awareness practitioners can feel that they are stretched. Fewer can show it clearly. This tool helps you map your current hours across the activities that actually make up your week, then model what changes when a new hire joins — or when your role shifts.</p>
+    <p>Set your weekly target hours, your new hire's target hours, and your own target after the hire — three independent columns, no auto-linking between them. Allocate each activity across all three and watch the donut charts, the team capacity total, and the plain-English narrative update in real time. A guided setup wizard walks you through the whole thing in about five minutes, including a category picker so you only see the activities that apply to your role. A business case section connects the numbers to outcomes your organisation actually cares about.</p>
+    <p>No installation. No login. Nothing leaves your browser.</p>
+  </section>
+
+  <section class="section">
+    <p class="section-label">Features</p>
+    <h2>Everything in one file</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">✦</div>
+        <h3>6-step guided wizard</h3>
+        <p>Starts with a category picker so you only work with activities relevant to your week. Covers your pain points, hours, the new hire's role, your current time split, and the full business case. Pain points feed straight into your risk narrative. Populates the calculator automatically when you finish.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⏱</div>
+        <h3>Three independent hour targets</h3>
+        <p>Your week, your week after the hire, and the new hire's week — each with its own target and its own running total. No auto-linking between columns, so part-time hires, job shares, and full-time roles are all easy to model.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">◑</div>
+        <h3>Light and dark mode</h3>
+        <p>Toggle between dark and light at any time. Print, image, and slide exports always use a clean white output regardless of which mode you're in.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⬇</div>
+        <h3>Four-slide presentation export</h3>
+        <p>Generate a current state slide, a proposed state slide, a dedicated new hire slide, and a capacity change slide — all at 1920×1080, ready to drop into a deck. Preview before downloading, export one slide or all four at once.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">◎</div>
+        <h3>Standalone donut downloads</h3>
+        <p>Each chart can be downloaded on its own as a labelled donut with a full legend, or as a clean breakdown table with no chart at all — useful for dropping straight into someone else's slide or document.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">＋</div>
+        <h3>Custom categories</h3>
+        <p>12 practitioner-specific activity categories to choose from, plus the ability to add your own — including capabilities that don't exist yet but would become possible with more capacity.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="section-label">Who it's for</p>
+    <h2>Any practitioner making a resourcing case</h2>
+    <div class="use-cases">
+      <div class="use-case">
+        <div class="use-case-icon">📊</div>
+        <h3>Justify headcount</h3>
+        <p>Show a manager or CISO exactly where capacity is going and what a new hire would unlock — in hours, not vague claims about being busy.</p>
+      </div>
+      <div class="use-case">
+        <div class="use-case-icon">🔄</div>
+        <h3>Document role growth</h3>
+        <p>Your job has expanded beyond its original scope. This makes that visible in a format that is easy to share and hard to dismiss.</p>
+      </div>
+      <div class="use-case">
+        <div class="use-case-icon">🎯</div>
+        <h3>Reframe your priorities</h3>
+        <p>Map where you want your time to go, not just where it currently ends up. Show what you would do differently with more resource.</p>
+      </div>
+      <div class="use-case">
+        <div class="use-case-icon">💬</div>
+        <h3>Prepare for the conversation</h3>
+        <p>Walk in with a clear visual and a written rationale, not just a feeling of being overwhelmed.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="how-it-works">
+    <p class="section-label">How it works</p>
+    <h2>Use the wizard or dive straight in</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Pick your activities</h3>
+          <p>The wizard opens on first visit and starts by asking what your week actually involves. Select from 12 practitioner-specific categories, deselect anything that does not apply, add your own if something is missing, and flag any capabilities that don't exist yet but would become possible with more capacity.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Name your pressure points</h3>
+          <p>Select the statements that ring true — content creation is a bottleneck, reactive work crowds out planning, reporting eats hours you'd rather spend elsewhere. These feed straight into the risk section of your business case later.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Set your weekly hours</h3>
+          <p>Enter how many hours you work per week, not including lunch. This becomes your baseline. Quick-select options cover the most common contracts.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>Describe the new hire's role</h3>
+          <p>A sentence or two on what they would take off your plate. This becomes the "why this role matters" text on the new hire slide.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h3>Allocate your current time</h3>
+          <p>Drag the sliders, or type the hours directly, to show how your week is split across your chosen activities. A live total in the header tracks progress against your target.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <h3>Build the business case</h3>
+          <p>Answer four questions — the initiative this investment unlocks, the risk it addresses, what success looks like in 12 months, and how you will measure it. Your pain points pre-fill the risk answer if you leave it blank.</p>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:24px;">Once you finish, the calculator opens with everything in place. From there you can independently fine-tune three columns — your time now, your time after the hire, and the new hire's time — and export a four-slide presentation, individual donut charts, a full Excel workbook, a PNG image, or a printed PDF.</p>
+  </section>
+
+  <section class="section">
+    <p class="section-label">Technical</p>
+    <h2>Nothing to install</h2>
+    <p>The calculator is a single HTML file. Open it in any browser and it works. No data is sent anywhere — everything runs locally on your device. First-time visitors are walked through setup automatically. Return visits open straight to the calculator.</p>
+    <div class="pill-list">
+      <span class="pill">Single HTML file</span>
+      <span class="pill">No login</span>
+      <span class="pill">No data collected</span>
+      <span class="pill">Works offline</span>
+      <span class="pill">Independent hour targets</span>
+      <span class="pill">Custom categories</span>
+      <span class="pill">Light &amp; dark mode</span>
+      <span class="pill">Four-slide export</span>
+      <span class="pill">Standalone donut downloads</span>
+      <span class="pill">Excel export</span>
+      <span class="pill">Print to PDF</span>
+      <span class="pill">Free to use &amp; share</span>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="cta-block">
+      <h2>Open the calculator</h2>
+      <p>Free to use. No setup. Works in any browser.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <a href="capacity-case-calculator.html" class="btn-primary">
+          Open the calculator →
+        </a>
+        <a href="capacity-case-calculator.html?wizard=true" class="btn-ghost">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1l1.8 3.6L14 5.6l-3 2.9.7 4.1L8 10.5 4.3 12.6l.7-4.1-3-2.9 4.2-.6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+          Start guided setup
+        </a>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <p>Built for the <a href="#">Secure Culture Hub</a> — a vendor-neutral community for security awareness practitioners. &nbsp;·&nbsp; Free to use and share.</p>
+</footer>
+
+<script>
+const THEME_KEY = 'sch-theme';
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const label = document.getElementById('theme-label');
+  const icon  = document.getElementById('theme-icon');
+  if (label) label.textContent = theme === 'light' ? 'Dark mode' : 'Light mode';
+  if (icon) {
+    icon.innerHTML = theme === 'light'
+      ? '<path d="M13.5 9A6 6 0 0 1 7 2.5a6 6 0 1 0 6.5 6.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>'
+      : '<circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>';
+  }
+  updateCalcLinks(theme);
+}
+
+function updateCalcLinks(theme) {
+  document.querySelectorAll('a[href*="capacity-case-calculator"]').forEach(a => {
+    const url = new URL(a.href, window.location.href);
+    url.searchParams.set('theme', theme);
+    a.href = url.toString();
+  });
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+}
+
+const saved = localStorage.getItem(THEME_KEY) || 'dark';
+applyTheme(saved);
+</script>
+</body>
+</html>
