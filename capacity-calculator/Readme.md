@@ -74,6 +74,18 @@ Single-file HTML tool. No frameworks, no build step.
 
 ---
 
+## Changelog
+
+**2026-06-30**
+- Fixed the add-category flow: replaced the dual +Add/+New button pattern with a single +Add button and a checkbox to mark a custom category as a new capability
+- Added a "suggested" tray showing standard categories not selected during wizard setup, so they can be added later as new capabilities with one click
+- Fixed the NEW badge missing from standalone donut and breakdown PNG exports (it previously only appeared in the live dashboard legend)
+- Fixed the Reset button reopening the wizard directly instead of the welcome screen
+- Moved the "New hire capacity analysis" callout alongside the export button row to remove unused space at the top of the dashboard
+- Renamed the tool from Capacity Visualisation Calculator to Capacity Case Calculator across the dashboard, slide exports, Excel export, and documentation
+
+---
+
 ## Part of SCH Tools
 
 [Back to SCH Tools](https://antdaviscyber.github.io/SCH-Tools/) · [Secure Culture Hub](https://www.secureculture.com)
