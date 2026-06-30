@@ -198,7 +198,8 @@ canvas.donut{display:block;margin:0 auto}
       <div id="alloc-prompt" style="background:var(--purple-dim);border:1px solid var(--purple);border-radius:8px;padding:12px 14px;margin-top:14px;margin-bottom:14px;font-size:12px;color:var(--purple-lt);line-height:1.6;display:none;"><strong style="display:block;margin-bottom:3px;">Start with your current hours</strong>Set how many hours you spend on each activity now. Then set New hire and You after independently.</div>
       <div class="panel-section-label" style="margin-top:14px;">Time allocation</div>
       <div id="alloc-list"></div>
-      <div class="add-cat-row"><input class="add-cat-input" id="new-cat-input" type="text" placeholder="Add a category..." maxlength="60" onkeydown="if(event.key==='Enter')addCategory(false)"/><button class="add-cat-btn" onclick="addCategory(false)">+ Add</button><button class="add-cat-btn new-btn" onclick="addCategory(true)">+ New</button></div>
+      <div class="add-cat-row"><input class="add-cat-input" id="new-cat-input" type="text" placeholder="Add a category..." maxlength="60" onkeydown="if(event.key==='Enter')addCategory(false)"/><button class="add-cat-btn" onclick="addCategory(false)">+ Add</button></div>
+      <div class="removed-tray" id="suggested-tray" style="display:none;"><div class="removed-tray-label">Not selected during setup &#x2014; click to add as a new capability</div><div class="removed-pills" id="suggested-pills"></div></div>
       <div class="removed-tray" id="removed-tray" style="display:none;"><div class="removed-tray-label">Removed &#x2014; click to restore</div><div class="removed-pills" id="removed-pills"></div></div>
     </div>
   </div>
@@ -290,6 +291,20 @@ function buildRemovedTray(){
   if(!state.removedStandard.length){tray.style.display='none';return;}
   tray.style.display='block';
   pills.innerHTML=state.removedStandard.map(n=>`<button class="removed-pill" onclick="restoreCategory(${JSON.stringify(n)})"><svg viewBox="0 0 16 16" fill="none" width="10" height="10"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>${n}</button>`).join('');
+  buildSuggestedTray();
+}
+function buildSuggestedTray(){
+  const tray=document.getElementById('suggested-tray');const pills=document.getElementById('suggested-pills');
+  if(!tray||!pills)return;
+  const missing=ALL_CATS.filter(n=>!state.cats.includes(n)&&!state.removedStandard.includes(n));
+  if(!missing.length){tray.style.display='none';return;}
+  tray.style.display='block';
+  pills.innerHTML=missing.map(n=>`<button class="removed-pill" style="border-color:var(--orange);color:var(--orange);" onclick="addSuggestedCategory(${JSON.stringify(n)})"><svg viewBox="0 0 16 16" fill="none" width="10" height="10"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>${n}</button>`).join('');
+}
+function addSuggestedCategory(name){
+  const idx=state.cats.length;
+  state.cats.push(name);state.now.push(0);state.hire.push(0);state.after.push(0);state.newCats.push(idx);
+  buildAllocList();buildRemovedTray();renderAll();
 }
 function setVal(i,field,val){
   const max=field==='hire'?getHireWH():field==='after'?getAfterWH():getWH();
@@ -525,7 +540,7 @@ function downloadDonut(chartIdx,label){
     const titles={0:'Current state \u2014 your time now',2:'After \u2014 your rebalanced time',1:'After \u2014 new hire time'};
     const el=document.createElement('div');
     el.style.cssText=`position:absolute;left:-9999px;top:0;width:520px;background:${bg};padding:32px 36px;font-family:'DM Sans',sans-serif;border-radius:12px;box-sizing:border-box;`;
-    const leg=state.cats.map((name,i)=>{const h=arr[i];const pct=total>0?Math.round((h/total)*100):0;if(!h)return'';return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="width:12px;height:12px;border-radius:3px;background:${COLOURS[i%COLOURS.length]};flex-shrink:0;"></div><div style="flex:1;font-size:14px;color:${mid};">${name}</div><div style="font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:${ink};">${h}h</div><div style="font-family:'DM Mono',monospace;font-size:12px;color:${muted};width:36px;text-align:right;">${pct}%</div></div>`;}).join('');
+    const leg=state.cats.map((name,i)=>{const h=arr[i];const pct=total>0?Math.round((h/total)*100):0;if(!h)return'';const isNewCap=state.newCats.includes(i);return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="width:12px;height:12px;border-radius:3px;background:${COLOURS[i%COLOURS.length]};flex-shrink:0;"></div><div style="flex:1;font-size:14px;color:${mid};">${name}${isNewCap?` <span style="font-size:10px;font-weight:600;color:#e07b39;background:rgba(224,123,57,.12);border-radius:3px;padding:1px 5px;">NEW</span>`:''}</div><div style="font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:${ink};">${h}h</div><div style="font-family:'DM Mono',monospace;font-size:12px;color:${muted};width:36px;text-align:right;">${pct}%</div></div>`;}).join('');
     el.innerHTML=`<div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:${purpleLt};margin-bottom:6px;">Secure Culture Hub</div><div style="font-size:18px;font-weight:600;color:${ink};margin-bottom:24px;">${titles[chartIdx]}</div><div style="display:flex;gap:28px;align-items:flex-start;"><canvas id="dl-donut-${chartIdx}" width="200" height="200" style="flex-shrink:0;"></canvas><div style="flex:1;padding-top:8px;">${leg}</div></div><div style="margin-top:16px;font-size:11px;color:${muted};border-top:1px solid ${rule};padding-top:10px;">${total}h of ${wh}h allocated</div>`;
     document.body.appendChild(el);drawDonut(`dl-donut-${chartIdx}`,arr,COLOURS,wh);
     html2canvas(el,{scale:2,backgroundColor:bg,useCORS:true,logging:false}).then(canvas=>{document.body.removeChild(el);const a=document.createElement('a');a.download=`capacity-donut-${label}-${new Date().toISOString().slice(0,10)}.png`;a.href=canvas.toDataURL('image/png');a.click();});
@@ -541,7 +556,7 @@ function downloadBreakdown(chartIdx,label){
     const titles={0:'Current state \u2014 your time now',2:'After \u2014 your rebalanced time',1:'After \u2014 new hire time'};
     const el=document.createElement('div');
     el.style.cssText=`position:absolute;left:-9999px;top:0;width:420px;background:${bg};padding:28px 32px;font-family:'DM Sans',sans-serif;box-sizing:border-box;`;
-    const rows=state.cats.map((name,i)=>{const h=arr[i];const pct=total>0?Math.round((h/total)*100):0;if(!h)return'';return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid ${rule};"><div style="width:10px;height:10px;border-radius:3px;background:${COLOURS[i%COLOURS.length]};flex-shrink:0;"></div><div style="flex:1;font-size:14px;color:${mid};">${name}</div><div style="font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:${ink};width:32px;text-align:right;">${h}h</div><div style="font-family:'DM Mono',monospace;font-size:12px;color:${muted};width:36px;text-align:right;">${pct}%</div></div>`;}).join('');
+    const rows=state.cats.map((name,i)=>{const h=arr[i];const pct=total>0?Math.round((h/total)*100):0;if(!h)return'';const isNewCap=state.newCats.includes(i);return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid ${rule};"><div style="width:10px;height:10px;border-radius:3px;background:${COLOURS[i%COLOURS.length]};flex-shrink:0;"></div><div style="flex:1;font-size:14px;color:${mid};">${name}${isNewCap?` <span style="font-size:10px;font-weight:600;color:#e07b39;background:rgba(224,123,57,.12);border-radius:3px;padding:1px 5px;">NEW</span>`:''}</div><div style="font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:${ink};width:32px;text-align:right;">${h}h</div><div style="font-family:'DM Mono',monospace;font-size:12px;color:${muted};width:36px;text-align:right;">${pct}%</div></div>`;}).join('');
     el.innerHTML=`<div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:${purpleLt};margin-bottom:5px;">Secure Culture Hub</div><div style="font-size:16px;font-weight:600;color:${ink};margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid ${rule};">${titles[chartIdx]}</div><div>${rows}</div><div style="margin-top:12px;font-size:11px;color:${muted};">${total}h of ${wh}h allocated</div>`;
     document.body.appendChild(el);
     html2canvas(el,{scale:2,backgroundColor:bg,useCORS:true,logging:false}).then(canvas=>{document.body.removeChild(el);const a=document.createElement('a');a.download=`capacity-breakdown-${label}-${new Date().toISOString().slice(0,10)}.png`;a.href=canvas.toDataURL('image/png');a.click();});
