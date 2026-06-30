@@ -198,7 +198,8 @@ canvas.donut{display:block;margin:0 auto}
       <div id="alloc-prompt" style="background:var(--purple-dim);border:1px solid var(--purple);border-radius:8px;padding:12px 14px;margin-top:14px;margin-bottom:14px;font-size:12px;color:var(--purple-lt);line-height:1.6;display:none;"><strong style="display:block;margin-bottom:3px;">Start with your current hours</strong>Set how many hours you spend on each activity now. Then set New hire and You after independently.</div>
       <div class="panel-section-label" style="margin-top:14px;">Time allocation</div>
       <div id="alloc-list"></div>
-      <div class="add-cat-row"><input class="add-cat-input" id="new-cat-input" type="text" placeholder="Add a category..." maxlength="60" onkeydown="if(event.key==='Enter')addCategory(false)"/><button class="add-cat-btn" onclick="addCategory(false)">+ Add</button></div>
+      <div class="add-cat-row"><input class="add-cat-input" id="new-cat-input" type="text" placeholder="Add a category..." maxlength="60" onkeydown="if(event.key==='Enter')addCategory(document.getElementById('new-cat-is-new').checked)"/><button class="add-cat-btn" onclick="addCategory(document.getElementById('new-cat-is-new').checked)">+ Add</button></div>
+      <label style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);margin-top:7px;cursor:pointer;user-select:none;"><input type="checkbox" id="new-cat-is-new" style="accent-color:var(--orange);width:13px;height:13px;cursor:pointer;"/>This is something new, not currently possible</label>
       <div class="removed-tray" id="suggested-tray" style="display:none;"><div class="removed-tray-label">Not selected during setup &#x2014; click to add as a new capability</div><div class="removed-pills" id="suggested-pills"></div></div>
       <div class="removed-tray" id="removed-tray" style="display:none;"><div class="removed-tray-label">Removed &#x2014; click to restore</div><div class="removed-pills" id="removed-pills"></div></div>
     </div>
@@ -270,7 +271,9 @@ function addCategory(isNew){
   const inp=document.getElementById('new-cat-input');const name=inp.value.trim();
   if(!name)return;if(state.cats.length>=20){showToast('Maximum 20 categories.');return;}
   const idx=state.cats.length;state.cats.push(name);state.now.push(0);state.hire.push(0);state.after.push(0);
-  if(isNew)state.newCats.push(idx);inp.value='';buildAllocList();buildRemovedTray();renderAll();
+  if(isNew)state.newCats.push(idx);inp.value='';
+  const cb=document.getElementById('new-cat-is-new');if(cb)cb.checked=false;
+  buildAllocList();buildRemovedTray();renderAll();
 }
 function removeCategory(i){
   if(state.cats.length<=1)return;
