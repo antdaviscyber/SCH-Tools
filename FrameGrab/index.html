@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FrameGrab - Video Thumbnail Capture</title>
+<title>FRAMEGRAB - Video Thumbnail Capture</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -42,14 +42,33 @@
   .wrap{max-width:1040px;margin:0 auto;}
 
   .top-row{
-    display:grid;
-    grid-template-columns:1fr;
-    gap:14px;
-    align-items:start;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
     margin-bottom:14px;
   }
   @media (min-width:760px){
-    .top-row{grid-template-columns:1fr 1fr;}
+    .top-row{
+      flex-direction:row;
+      align-items:stretch;
+    }
+    .top-row .source-panel{
+      flex:1 1 auto;
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+    }
+    .source-body{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    .top-row .capture-panel{
+      flex:0 0 360px;
+      display:flex;
+      flex-direction:column;
+    }
   }
 
   /* ---- Header ---- */
@@ -84,39 +103,39 @@
     background:var(--bg-panel);
     border:1px solid var(--border);
     border-radius:6px;
-    padding:12px 14px;
+    padding:10px 12px;
     margin-bottom:0;
   }
   .panel-label{
     font-family:'Barlow Condensed',sans-serif;
     font-weight:600;
-    font-size:12px;
+    font-size:11px;
     letter-spacing:1.5px;
     text-transform:uppercase;
     color:var(--text-dim);
-    margin-bottom:9px;
+    margin-bottom:7px;
     display:flex;
     align-items:center;
-    gap:8px;
+    gap:7px;
   }
   .panel-label::before{
     content:"";
-    width:7px;height:7px;border-radius:50%;
+    width:6px;height:6px;border-radius:50%;
     background:var(--accent-rec);
     display:inline-block;
   }
 
-  .tabs{display:flex;gap:2px;margin-bottom:12px;}
+  .tabs{display:flex;gap:2px;margin-bottom:8px;}
   .tab-btn{
     font-family:'Barlow Condensed',sans-serif;
     font-weight:600;
-    font-size:14px;
+    font-size:13px;
     letter-spacing:0.5px;
     text-transform:uppercase;
     background:transparent;
     color:var(--text-dim);
     border:1px solid var(--border);
-    padding:7px 16px;
+    padding:5px 14px;
     cursor:pointer;
   }
   .tab-btn:first-child{border-radius:4px 0 0 4px;}
@@ -131,23 +150,23 @@
     background:var(--bg-base);
     border:1px solid var(--border-light);
     color:var(--text-primary);
-    padding:9px 12px;
+    padding:7px 10px;
     border-radius:4px;
     font-family:'Inter',sans-serif;
-    font-size:14px;
+    font-size:13px;
   }
   input[type="text"]:focus, input[type="url"]:focus{outline:1px solid var(--accent-time);}
 
   .btn{
     font-family:'Barlow Condensed',sans-serif;
     font-weight:600;
-    font-size:14px;
+    font-size:13px;
     letter-spacing:0.5px;
     text-transform:uppercase;
     background:var(--bg-raised);
     color:var(--text-primary);
     border:1px solid var(--border-light);
-    padding:9px 16px;
+    padding:7px 14px;
     border-radius:4px;
     cursor:pointer;
     white-space:nowrap;
@@ -158,17 +177,17 @@
   .btn.primary{background:var(--accent-rec);border-color:var(--accent-rec);color:#241c02;}
   .btn.primary:hover{background:#ffd75e;}
   .btn.ghost{background:transparent;}
-  .btn.small{padding:6px 12px;font-size:12px;}
+  .btn.small{padding:5px 11px;font-size:11px;}
 
   .file-label{
     font-family:'Barlow Condensed',sans-serif;
     font-weight:600;
-    font-size:14px;
+    font-size:13px;
     letter-spacing:0.5px;
     text-transform:uppercase;
     background:var(--bg-raised);
     border:1px solid var(--border-light);
-    padding:9px 16px;
+    padding:7px 14px;
     border-radius:4px;
     cursor:pointer;
     display:inline-block;
@@ -177,7 +196,7 @@
   #fileInput{display:none;}
   .filename{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim);}
 
-  .hint{font-size:12px;color:var(--text-faint);margin-top:10px;line-height:1.5;}
+  .hint{font-size:12px;color:var(--text-faint);line-height:1.5;margin-bottom:14px;}
 
   /* ---- Stage ---- */
   .player-block{display:flex;flex-direction:column;margin-bottom:14px;}
@@ -188,7 +207,6 @@
     border:1px solid var(--border-light);
     border-radius:6px;
     width:100%;
-    max-width:calc(52vh * var(--ar));
     aspect-ratio:var(--ar);
     max-height:52vh;
     margin:0 auto;
@@ -305,13 +323,12 @@
   .tbtn:disabled{opacity:0.3;cursor:not-allowed;}
 
   /* ---- Capture panel ---- */
-  .capture-row{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-end;}
-  .capture-row.auto-row{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
-  .field{display:flex;flex-direction:column;gap:6px;}
+  .capture-panel .field{margin-bottom:10px;}
+  .field{display:flex;flex-direction:column;gap:5px;}
   .field label{
     font-family:'Barlow Condensed',sans-serif;
     font-weight:600;
-    font-size:12px;
+    font-size:11px;
     letter-spacing:1px;
     text-transform:uppercase;
     color:var(--text-dim);
@@ -320,22 +337,25 @@
     background:var(--bg-base);
     color:var(--text-primary);
     border:1px solid var(--border-light);
-    padding:8px 10px;
+    padding:7px 9px;
     border-radius:4px;
     font-family:'JetBrains Mono',monospace;
-    font-size:13px;
+    font-size:12px;
     min-width:150px;
+    width:100%;
   }
   .spacer{flex:1;}
+  .auto-btn-full{width:100%;padding:10px 14px;font-size:14px;}
 
   .auto-progress{
     font-family:'JetBrains Mono',monospace;
     font-size:12px;
     color:var(--accent-time);
     margin-top:10px;
-    display:none;
+    min-height:15px;
+    visibility:hidden;
   }
-  .auto-progress.active{display:block;}
+  .auto-progress.active{visibility:visible;}
 
   /* ---- Filmstrip gallery ---- */
   .gallery-panel{}
@@ -457,10 +477,15 @@
     <div class="tag">SCRUB · SNAP · EXPORT</div>
   </div>
 
+  <div class="hint" id="hintText">
+    You can also drag and drop a video file straight onto the stage below. For URLs, only direct links to video files work (no YouTube or Vimeo pages). If a URL loads but capture fails silently, the host is blocking cross-origin access, so download the file first and use the File tab instead.
+  </div>
+
   <div class="top-row">
 
-  <div class="panel">
+  <div class="panel source-panel">
     <div class="panel-label">Load Source</div>
+    <div class="source-body">
     <div class="tabs">
       <button class="tab-btn active" data-tab="file">File</button>
       <button class="tab-btn" data-tab="url">URL</button>
@@ -475,47 +500,28 @@
       <input type="url" id="urlInput" placeholder="https://example.com/video.mp4">
       <button class="btn" id="loadUrlBtn">Load video</button>
     </div>
-
-    <div class="hint" id="hintText">
-      You can also drag and drop a video file straight onto the stage below. For URLs, only direct links to video files work (no YouTube or Vimeo pages). If a URL loads but capture fails silently, the host is blocking cross-origin access, so download the file first and use the File tab instead.
     </div>
   </div>
 
-  <div class="panel">
+  <div class="panel capture-panel">
     <div class="panel-label">Capture</div>
-    <div class="capture-row">
-      <div class="field">
-        <label>Snap width</label>
-        <select id="snapWidth">
-          <option value="1" selected>100% (native)</option>
-          <option value="0.75">75%</option>
-          <option value="0.5">50%</option>
-          <option value="0.25">25%</option>
-          <option value="0.1">10%</option>
-        </select>
-      </div>
+    <div class="field">
+      <label>Auto snap each</label>
+      <select id="autoInterval">
+        <option value="pct:2" selected>2% (50 frames)</option>
+        <option value="pct:4">4% (25 frames)</option>
+        <option value="pct:5">5% (20 frames)</option>
+        <option value="pct:6.25">6.25% (16 frames)</option>
+        <option value="pct:10">10% (10 frames)</option>
+        <option value="sec:1">1 sec</option>
+        <option value="sec:5">5 sec</option>
+        <option value="sec:10">10 sec</option>
+        <option value="sec:30">30 sec</option>
+        <option value="sec:60">1 minute</option>
+      </select>
     </div>
-    <div class="capture-row auto-row">
-      <div class="field">
-        <label>Auto snap each</label>
-        <select id="autoInterval">
-          <option value="pct:2" selected>2% (50 frames)</option>
-          <option value="pct:4">4% (25 frames)</option>
-          <option value="pct:5">5% (20 frames)</option>
-          <option value="pct:6.25">6.25% (16 frames)</option>
-          <option value="pct:10">10% (10 frames)</option>
-          <option value="sec:1">1 sec</option>
-          <option value="sec:5">5 sec</option>
-          <option value="sec:10">10 sec</option>
-          <option value="sec:30">30 sec</option>
-          <option value="sec:60">1 minute</option>
-        </select>
-      </div>
-      <div class="field">
-        <button class="btn" id="autoBtn" disabled>Auto snap</button>
-      </div>
-    </div>
-    <div class="auto-progress" id="autoProgress">Capturing frame 0 / 0…</div>
+    <button class="btn auto-btn-full" id="autoBtn" disabled>Auto snap</button>
+    <div class="auto-progress" id="autoProgress">Capturing frame 0 / 0...</div>
   </div>
 
   </div>
@@ -540,7 +546,7 @@
       <button class="tbtn" id="stepFwd1s" disabled>+1s</button>
       <button class="tbtn" id="stepFwd5s" disabled>+5s</button>
       <button class="tbtn" id="stepFwdMin" disabled>+1m</button>
-      <button class="tbtn snap" id="snapBtn" disabled>Snap photo</button>
+      <button class="tbtn snap" id="snapBtn" disabled>Grab frame</button>
     </div>
   </div>
   </div>
@@ -588,7 +594,6 @@
   const snapBtn = document.getElementById('snapBtn');
   const autoBtn = document.getElementById('autoBtn');
   const autoProgress = document.getElementById('autoProgress');
-  const snapWidthSel = document.getElementById('snapWidth');
   const autoIntervalSel = document.getElementById('autoInterval');
   const galleryCount = document.getElementById('galleryCount');
   const frameGrid = document.getElementById('frameGrid');
@@ -763,14 +768,10 @@
   function captureFrame(){
     const nativeW = video.videoWidth, nativeH = video.videoHeight;
     if(!nativeW){ showToast('Video not ready yet'); return null; }
-    if(video.readyState < 1){ showToast('Frame not decoded yet, try again in a moment'); return null; }
-    const scale = parseFloat(snapWidthSel.value) || 1;
-    const targetW = Math.max(1, Math.round(nativeW * scale));
-    const targetH = Math.max(1, Math.round(nativeH * scale));
-    canvas.width = targetW;
-    canvas.height = targetH;
+    canvas.width = nativeW;
+    canvas.height = nativeH;
     try{
-      ctx.drawImage(video, 0, 0, targetW, targetH);
+      ctx.drawImage(video, 0, 0, nativeW, nativeH);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
       return dataUrl;
     }catch(e){
@@ -837,6 +838,9 @@
         video.removeEventListener('seeked', finish);
         resolve();
       };
+      if(typeof video.requestVideoFrameCallback === 'function'){
+        video.requestVideoFrameCallback(finish);
+      }
       video.addEventListener('seeked', finish);
       setTimeout(finish, 700); // safety net so a click never hangs
     });
@@ -845,7 +849,13 @@
   snapBtn.addEventListener('click', async ()=>{
     await waitUntilFrameReady();
     const dataUrl = captureFrame();
-    if(dataUrl) addFrameToGallery(dataUrl, fmtTime(video.currentTime), video.currentTime);
+    if(dataUrl){
+      const timeSeconds = video.currentTime;
+      const tc = fmtTime(timeSeconds);
+      addFrameToGallery(dataUrl, tc, timeSeconds);
+      downloadFrame({dataUrl, tc}, frames.length - 1);
+      showToast('Frame saved to your downloads');
+    }
   });
 
   clearBtn.addEventListener('click', ()=>{
