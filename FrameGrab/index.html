@@ -416,10 +416,17 @@
     background-position:6px center;
   }
   .frame-grid{
-    display:flex;
+    display:grid;
+    grid-template-columns:repeat(5, 1fr);
     gap:14px;
-    overflow-x:auto;
     padding:10px 12px 12px;
+    overflow:visible;
+  }
+  @media (max-width:900px){
+    .frame-grid{grid-template-columns:repeat(3, 1fr);}
+  }
+  @media (max-width:560px){
+    .frame-grid{grid-template-columns:repeat(2, 1fr);}
   }
   .frame-card{
     background:var(--bg-raised);
@@ -427,8 +434,12 @@
     border-radius:4px;
     overflow:hidden;
     position:relative;
-    flex:0 0 190px;
-    width:190px;
+    transition:transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .frame-card:hover{
+    transform:scale(1.9);
+    z-index:20;
+    box-shadow:0 16px 40px rgba(0,0,0,0.65);
   }
   .frame-card img{width:100%;display:block;background:#000;cursor:pointer;}
   .frame-card img:hover{outline:2px solid var(--accent-time);outline-offset:-2px;}
@@ -486,6 +497,7 @@
     max-height:90vh;
     overflow-y:auto;
   }
+  .modal-box-wide{max-width:1080px;}
   .modal-header{
     font-family:'Barlow Condensed',sans-serif;
     font-weight:600;
@@ -494,6 +506,16 @@
     text-transform:uppercase;
     color:var(--text-primary);
     margin-bottom:12px;
+  }
+  .editor-layout{
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+  }
+  @media (min-width:860px){
+    .editor-layout{flex-direction:row;align-items:flex-start;}
+    .editor-preview-col{flex:1.3;min-width:0;}
+    .editor-controls-col{flex:1;min-width:280px;max-height:70vh;overflow-y:auto;padding-right:4px;}
   }
   .modal-preview-wrap{
     background:#000;
@@ -507,6 +529,16 @@
     min-height:160px;
   }
   .modal-preview-wrap img{max-width:100%;max-height:50vh;display:block;}
+  .modal-preview-wrap-large{min-height:280px;}
+  .modal-preview-wrap-large canvas{max-width:100%;max-height:60vh;display:block;cursor:crosshair;}
+  .annotate-toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:6px;
+    margin-bottom:6px;
+  }
+  .annotate-hint{font-size:11px;color:var(--text-faint);}
   .modal-subhead{
     font-family:'Barlow Condensed',sans-serif;
     font-weight:600;
@@ -515,13 +547,17 @@
     text-transform:uppercase;
     color:var(--text-dim);
     margin-bottom:8px;
+    margin-top:16px;
   }
+  .modal-subhead:first-child{margin-top:0;}
   .style-options{
     display:grid;
     grid-template-columns:repeat(2, 1fr);
     gap:8px;
-    margin-bottom:16px;
+    margin-bottom:4px;
   }
+  .style-options-3{display:flex;flex-wrap:wrap;}
+  .style-options-3 .modal-choice-btn{flex:1 1 30%;}
   .modal-choice-btn{
     font-family:'Barlow Condensed',sans-serif;
     font-weight:600;
@@ -537,7 +573,30 @@
   }
   .modal-choice-btn:hover{background:var(--bg-raised-hover);color:var(--text-primary);}
   .modal-choice-btn.active{background:var(--accent-time);color:#2a1c02;border-color:var(--accent-time);}
-  .modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;}
+
+  .slider-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .slider-row label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--text-dim);
+    width:78px;
+    flex-shrink:0;
+  }
+  .slider-row input[type="range"]{flex:1;}
+  .inline-row{margin-bottom:8px;}
+  .inline-row.two-up{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .inline-row select, .inline-row input[type="text"]{width:100%;}
+  .check-label{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--text-dim);
+    cursor:pointer;
+  }
+  .check-label input{cursor:pointer;}
 
   .empty-gallery{
     font-family:'JetBrains Mono',monospace;
@@ -680,30 +739,99 @@
 <canvas id="captureCanvas" style="display:none;"></canvas>
 
 <div class="modal-backdrop" id="editModal">
-  <div class="modal-box">
+  <div class="modal-box modal-box-wide">
     <div class="modal-header">Edit frame</div>
-    <div class="modal-preview-wrap">
-      <img id="editPreviewImg" alt="Preview">
+    <div class="editor-layout">
+
+      <div class="editor-preview-col">
+        <div class="modal-preview-wrap modal-preview-wrap-large">
+          <canvas id="editPreviewCanvas"></canvas>
+        </div>
+        <div class="annotate-toolbar">
+          <span class="modal-subhead" style="margin:0;">Draw</span>
+          <button class="modal-choice-btn tool-btn active" data-tool="none">None</button>
+          <button class="modal-choice-btn tool-btn" data-tool="arrow">Arrow</button>
+          <button class="modal-choice-btn tool-btn" data-tool="box">Box</button>
+          <button class="modal-choice-btn tool-btn" data-tool="blur">Blur</button>
+          <button class="btn small ghost" id="undoAnnotationBtn">Undo</button>
+          <button class="btn small ghost" id="clearAnnotationBtn">Clear</button>
+        </div>
+        <div class="annotate-hint">Click and drag on the preview to draw</div>
+      </div>
+
+      <div class="editor-controls-col">
+
+        <div class="modal-subhead">Crop</div>
+        <div class="style-options">
+          <button class="modal-choice-btn ratio-btn active" data-ratio="original">Original</button>
+          <button class="modal-choice-btn ratio-btn" data-ratio="square">1:1</button>
+          <button class="modal-choice-btn ratio-btn" data-ratio="vertical">9:16</button>
+          <button class="modal-choice-btn ratio-btn" data-ratio="horizontal">16:9</button>
+        </div>
+
+        <div class="modal-subhead">Filter</div>
+        <div class="style-options style-options-3">
+          <button class="modal-choice-btn filter-btn active" data-filter="none">None</button>
+          <button class="modal-choice-btn filter-btn" data-filter="grayscale">Grayscale</button>
+          <button class="modal-choice-btn filter-btn" data-filter="sepia">Sepia</button>
+          <button class="modal-choice-btn filter-btn" data-filter="contrast">Contrast</button>
+          <button class="modal-choice-btn filter-btn" data-filter="vhs">VHS</button>
+        </div>
+
+        <div class="modal-subhead">Adjust</div>
+        <div class="slider-row">
+          <label>Brightness</label>
+          <input type="range" id="brightnessSlider" min="-50" max="50" value="0">
+        </div>
+        <div class="slider-row">
+          <label>Contrast</label>
+          <input type="range" id="contrastSlider" min="-50" max="50" value="0">
+        </div>
+
+        <div class="modal-subhead">Timestamp</div>
+        <div class="inline-row">
+          <label class="check-label"><input type="checkbox" id="timestampToggle"> Burn in timestamp</label>
+        </div>
+        <div class="inline-row">
+          <select id="timestampMode">
+            <option value="video">Video time (06:34.45)</option>
+            <option value="clock">Current date and time</option>
+          </select>
+        </div>
+
+        <div class="modal-subhead">Text</div>
+        <div class="inline-row">
+          <input type="text" id="overlayText" placeholder="Add a caption">
+        </div>
+        <div class="inline-row two-up">
+          <select id="overlayFont">
+            <option value="'Barlow Condensed',sans-serif">Barlow Condensed</option>
+            <option value="'JetBrains Mono',monospace">JetBrains Mono</option>
+            <option value="'Barber Chop','Barlow Condensed',sans-serif">Barber Chop</option>
+          </select>
+          <select id="overlayPosition">
+            <option value="bottom">Bottom</option>
+            <option value="top">Top</option>
+          </select>
+        </div>
+
+        <div class="modal-subhead">Frame</div>
+        <div class="style-options">
+          <button class="modal-choice-btn style-btn active" data-style="none">None</button>
+          <button class="modal-choice-btn style-btn" data-style="polaroid">Polaroid</button>
+          <button class="modal-choice-btn style-btn" data-style="filmstrip">Film strip</button>
+          <button class="modal-choice-btn style-btn" data-style="cctv">CCTV</button>
+        </div>
+
+      </div>
     </div>
-    <div class="modal-subhead">Crop</div>
-    <div class="style-options">
-      <button class="modal-choice-btn ratio-btn active" data-ratio="original">Original</button>
-      <button class="modal-choice-btn ratio-btn" data-ratio="square">1:1</button>
-      <button class="modal-choice-btn ratio-btn" data-ratio="vertical">9:16</button>
-      <button class="modal-choice-btn ratio-btn" data-ratio="horizontal">16:9</button>
-    </div>
-    <div class="modal-subhead">Frame</div>
-    <div class="style-options">
-      <button class="modal-choice-btn style-btn active" data-style="none">None</button>
-      <button class="modal-choice-btn style-btn" data-style="polaroid">Polaroid</button>
-      <button class="modal-choice-btn style-btn" data-style="filmstrip">Film strip</button>
-      <button class="modal-choice-btn style-btn" data-style="cctv">CCTV</button>
-    </div>
+
     <div class="modal-actions">
       <button class="btn ghost" id="editCancelBtn">Cancel</button>
       <button class="btn primary" id="editApplyBtn">Apply</button>
     </div>
   </div>
+</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -913,7 +1041,15 @@
   }
 
   function addFrameToGallery(dataUrl, tcLabel, timeSeconds){
-    frames.push({dataUrl, original: dataUrl, style: 'none', ratio: 'original', tc: tcLabel, time: timeSeconds});
+    frames.push({
+      dataUrl, original: dataUrl,
+      style: 'none', ratio: 'original',
+      filter: 'none', brightness: 0, contrast: 0,
+      timestamp: {enabled: false, mode: 'video'},
+      text: {text: '', font: "'Barlow Condensed',sans-serif", position: 'bottom'},
+      annotations: [],
+      tc: tcLabel, time: timeSeconds
+    });
     renderGallery();
   }
 
@@ -946,17 +1082,13 @@
     }
     galleryCount.textContent = frames.length + (frames.length===1 ? ' FRAME CAPTURED' : ' FRAMES CAPTURED');
 
-    const snapBadge = document.getElementById('snapBadge');
     const jumpToGallery = document.getElementById('jumpToGallery');
     const jumpToGalleryCount = document.getElementById('jumpToGalleryCount');
     if(frames.length > 0){
-      snapBadge.textContent = frames.length;
-      snapBadge.style.display = 'flex';
       jumpToGallery.style.display = 'block';
       jumpToGalleryCount.textContent = frames.length;
       jumpToGallery.lastChild.textContent = frames.length===1 ? ' frame captured, view below' : ' frames captured, view below';
     }else{
-      snapBadge.style.display = 'none';
       jumpToGallery.style.display = 'none';
     }
   }
@@ -985,27 +1117,172 @@
     });
   }
 
-  async function renderWithStyle(dataUrl, style){
-    const img = await loadImage(dataUrl);
+  const RATIOS = {
+    original: null,
+    square: 1 / 1,
+    vertical: 9 / 16,
+    horizontal: 16 / 9
+  };
+
+  function cropToCanvas(img, ratioKey){
+    const targetAspect = RATIOS[ratioKey];
     const w = img.naturalWidth, h = img.naturalHeight;
+    let sx = 0, sy = 0, sw = w, sh = h;
+    if(targetAspect){
+      const srcAspect = w / h;
+      if(srcAspect > targetAspect){
+        sh = h; sw = Math.round(h * targetAspect); sx = Math.round((w - sw) / 2); sy = 0;
+      } else {
+        sw = w; sh = Math.round(w / targetAspect); sx = 0; sy = Math.round((h - sh) / 2);
+      }
+    }
+    const c = document.createElement('canvas');
+    c.width = sw; c.height = sh;
+    c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+    return c;
+  }
+
+  function applyFilterAdjust(srcCanvas, filter, brightness, contrast){
+    const w = srcCanvas.width, h = srcCanvas.height;
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const cx = c.getContext('2d');
+    const parts = [];
+    if(filter === 'grayscale') parts.push('grayscale(1)');
+    else if(filter === 'sepia') parts.push('sepia(0.85)');
+    else if(filter === 'contrast') parts.push('contrast(1.35) saturate(1.15)');
+    else if(filter === 'vhs') parts.push('saturate(0.6) contrast(1.05)');
+    parts.push('brightness(' + (100 + (brightness || 0)) + '%)');
+    parts.push('contrast(' + (100 + (contrast || 0)) + '%)');
+    cx.filter = parts.join(' ');
+    cx.drawImage(srcCanvas, 0, 0, w, h);
+    cx.filter = 'none';
+    if(filter === 'vhs'){
+      cx.globalAlpha = 0.15;
+      cx.fillStyle = '#000';
+      for(let y = 0; y < h; y += 3) cx.fillRect(0, y, w, 1);
+      cx.globalAlpha = 1;
+    }
+    return c;
+  }
+
+  function pixelateRegion(canvas, rx, ry, rw, rh){
+    const cx = canvas.getContext('2d');
+    rx = Math.max(0, Math.round(rx)); ry = Math.max(0, Math.round(ry));
+    rw = Math.min(canvas.width - rx, Math.round(rw)); rh = Math.min(canvas.height - ry, Math.round(rh));
+    if(rw < 2 || rh < 2) return;
+    const blockSize = Math.max(6, Math.round(Math.min(rw, rh) / 10));
+    const sW = Math.max(1, Math.round(rw / blockSize));
+    const sH = Math.max(1, Math.round(rh / blockSize));
+    const regionCanvas = document.createElement('canvas');
+    regionCanvas.width = rw; regionCanvas.height = rh;
+    regionCanvas.getContext('2d').drawImage(canvas, rx, ry, rw, rh, 0, 0, rw, rh);
+    const small = document.createElement('canvas');
+    small.width = sW; small.height = sH;
+    small.getContext('2d').drawImage(regionCanvas, 0, 0, rw, rh, 0, 0, sW, sH);
+    cx.imageSmoothingEnabled = false;
+    cx.drawImage(small, 0, 0, sW, sH, rx, ry, rw, rh);
+    cx.imageSmoothingEnabled = true;
+  }
+
+  function drawAnnotationsOnCanvas(canvas, annotations){
+    const cx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    annotations.forEach(a=>{
+      const x1 = a.x1 * w, y1 = a.y1 * h, x2 = a.x2 * w, y2 = a.y2 * h;
+      if(a.type === 'box'){
+        cx.strokeStyle = 'rgba(255,199,44,0.95)';
+        cx.lineWidth = Math.max(2, Math.round(Math.min(w, h) * 0.006));
+        cx.strokeRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
+      } else if(a.type === 'arrow'){
+        const lw = Math.max(2, Math.round(Math.min(w, h) * 0.008));
+        cx.strokeStyle = 'rgba(255,199,44,0.95)';
+        cx.fillStyle = 'rgba(255,199,44,0.95)';
+        cx.lineWidth = lw;
+        cx.beginPath();
+        cx.moveTo(x1, y1);
+        cx.lineTo(x2, y2);
+        cx.stroke();
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const headLen = Math.max(10, Math.min(w, h) * 0.03);
+        cx.beginPath();
+        cx.moveTo(x2, y2);
+        cx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+        cx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+        cx.closePath();
+        cx.fill();
+      } else if(a.type === 'blur'){
+        const rx = Math.min(x1, x2), ry = Math.min(y1, y2);
+        pixelateRegion(canvas, rx, ry, Math.abs(x2 - x1), Math.abs(y2 - y1));
+      }
+    });
+  }
+
+  function drawTimestamp(canvas, mode, timeSeconds){
+    const cx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    let text;
+    if(mode === 'clock'){
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      text = pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear() + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+    } else {
+      text = fmtTime(timeSeconds || 0);
+    }
+    const fontSize = Math.max(12, Math.round(Math.min(w, h) * 0.045));
+    cx.font = fontSize + 'px "JetBrains Mono", monospace';
+    cx.textBaseline = 'bottom';
+    const paddingX = Math.round(fontSize * 0.6);
+    const paddingY = Math.round(fontSize * 0.5);
+    const metrics = cx.measureText(text);
+    const boxW = metrics.width + paddingX * 2;
+    const boxH = fontSize + paddingY * 1.4;
+    const bx = w - boxW - Math.round(w * 0.02);
+    const by = h - Math.round(h * 0.02);
+    cx.fillStyle = 'rgba(0,0,0,0.6)';
+    cx.fillRect(bx, by - boxH, boxW, boxH);
+    cx.fillStyle = '#f2c230';
+    cx.fillText(text, bx + paddingX, by - paddingY * 0.3);
+  }
+
+  function drawTextOverlay(canvas, opts){
+    const cx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    const fontSize = Math.max(16, Math.round(Math.min(w, h) * 0.07));
+    cx.font = '700 ' + fontSize + 'px ' + opts.font;
+    cx.textAlign = 'center';
+    cx.textBaseline = 'middle';
+    const barH = fontSize * 1.8;
+    const y = opts.position === 'top' ? barH / 2 : h - barH / 2;
+    cx.fillStyle = 'rgba(0,0,0,0.55)';
+    cx.fillRect(0, opts.position === 'top' ? 0 : h - barH, w, barH);
+    cx.fillStyle = '#ffffff';
+    cx.fillText(opts.text, w / 2, y);
+  }
+
+  function applyBorderCanvas(srcCanvas, style){
+    const w = srcCanvas.width, h = srcCanvas.height;
     const c = document.createElement('canvas');
     const cx = c.getContext('2d');
+    let inner = {x: 0, y: 0, w: w, h: h};
 
     if(style === 'polaroid'){
-      const pad = Math.round(w * 0.06);
-      const bottomPad = Math.round(w * 0.18);
+      const base = Math.min(w, h);
+      const pad = Math.round(base * 0.05);
+      const bottomPad = Math.round(base * 0.16);
       c.width = w + pad * 2;
       c.height = h + pad * 2 + bottomPad;
       cx.fillStyle = '#f5f2ea';
       cx.fillRect(0, 0, c.width, c.height);
-      cx.drawImage(img, pad, pad, w, h);
+      cx.drawImage(srcCanvas, pad, pad, w, h);
+      inner = {x: pad, y: pad, w: w, h: h};
     } else if(style === 'filmstrip'){
       const margin = Math.round(h * 0.09);
       c.width = w;
       c.height = h + margin * 2;
       cx.fillStyle = '#000';
       cx.fillRect(0, 0, c.width, c.height);
-      cx.drawImage(img, 0, margin, w, h);
+      cx.drawImage(srcCanvas, 0, margin, w, h);
       const holeW = Math.max(6, Math.round(w * 0.012));
       const holeH = Math.round(margin * 0.4);
       const gap = holeW * 2.4;
@@ -1014,10 +1291,10 @@
         cx.fillRect(x, margin * 0.3, holeW, holeH);
         cx.fillRect(x, c.height - margin * 0.3 - holeH, holeW, holeH);
       }
+      inner = {x: 0, y: margin, w: w, h: h};
     } else if(style === 'cctv'){
-      c.width = w;
-      c.height = h;
-      cx.drawImage(img, 0, 0, w, h);
+      c.width = w; c.height = h;
+      cx.drawImage(srcCanvas, 0, 0, w, h);
       const len = Math.round(Math.min(w, h) * 0.07);
       const off = Math.round(Math.min(w, h) * 0.025);
       const lw = Math.max(2, Math.round(Math.min(w, h) * 0.006));
@@ -1035,108 +1312,248 @@
       bracket(w - off, off, -1, 1);
       bracket(off, h - off, 1, -1);
       bracket(w - off, h - off, -1, -1);
+      inner = {x: 0, y: 0, w: w, h: h};
     } else {
-      c.width = w;
-      c.height = h;
-      cx.drawImage(img, 0, 0, w, h);
+      c.width = w; c.height = h;
+      cx.drawImage(srcCanvas, 0, 0, w, h);
+      inner = {x: 0, y: 0, w: w, h: h};
     }
-
-    return c.toDataURL('image/jpeg', 0.92);
+    return {canvas: c, inner};
   }
 
-  const RATIOS = {
-    original: null,
-    square: 1 / 1,
-    vertical: 9 / 16,
-    horizontal: 16 / 9
-  };
-
-  async function cropToRatio(dataUrl, ratioKey){
-    const targetAspect = RATIOS[ratioKey];
-    if(!targetAspect) return dataUrl;
-    const img = await loadImage(dataUrl);
-    const w = img.naturalWidth, h = img.naturalHeight;
-    const srcAspect = w / h;
-    let sx, sy, sw, sh;
-    if(srcAspect > targetAspect){
-      sh = h;
-      sw = Math.round(h * targetAspect);
-      sx = Math.round((w - sw) / 2);
-      sy = 0;
-    } else {
-      sw = w;
-      sh = Math.round(w / targetAspect);
-      sx = 0;
-      sy = Math.round((h - sh) / 2);
-    }
-    const c = document.createElement('canvas');
-    c.width = sw;
-    c.height = sh;
-    c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-    return c.toDataURL('image/jpeg', 0.92);
-  }
-
-  async function composeFrame(original, ratioKey, borderStyle){
-    const cropped = await cropToRatio(original, ratioKey);
-    return renderWithStyle(cropped, borderStyle);
-  }
-
+  // ---- Edit modal state ----
   let editingIndex = null;
-  let editingStyle = 'none';
-  let editingRatio = 'original';
+  let draft = null;
+  let workCanvas = null;
+  let currentTool = 'none';
+  let dragging = false;
+  let dragStart = null;
+  let inProgressAnnotation = null;
+  let lastInner = {x: 0, y: 0, w: 1, h: 1};
 
   const editModal = document.getElementById('editModal');
-  const editPreviewImg = document.getElementById('editPreviewImg');
+  const editPreviewCanvas = document.getElementById('editPreviewCanvas');
   const editApplyBtn = document.getElementById('editApplyBtn');
   const editCancelBtn = document.getElementById('editCancelBtn');
   const styleButtons = document.querySelectorAll('.style-btn');
   const ratioButtons = document.querySelectorAll('.ratio-btn');
+  const filterButtons = document.querySelectorAll('.filter-btn');
+  const toolButtons = document.querySelectorAll('.tool-btn');
+  const brightnessSlider = document.getElementById('brightnessSlider');
+  const contrastSlider = document.getElementById('contrastSlider');
+  const timestampToggle = document.getElementById('timestampToggle');
+  const timestampMode = document.getElementById('timestampMode');
+  const overlayText = document.getElementById('overlayText');
+  const overlayFont = document.getElementById('overlayFont');
+  const overlayPosition = document.getElementById('overlayPosition');
+  const undoAnnotationBtn = document.getElementById('undoAnnotationBtn');
+  const clearAnnotationBtn = document.getElementById('clearAnnotationBtn');
 
-  async function updateEditPreview(){
-    editPreviewImg.src = await composeFrame(frames[editingIndex].original, editingRatio, editingStyle);
+  async function rebuildWorkCanvas(){
+    const img = await loadImage(frames[editingIndex].original);
+    let c = cropToCanvas(img, draft.ratio);
+    c = applyFilterAdjust(c, draft.filter, draft.brightness, draft.contrast);
+    workCanvas = c;
+  }
+
+  function renderPreview(){
+    if(!workCanvas) return;
+    const clone = document.createElement('canvas');
+    clone.width = workCanvas.width;
+    clone.height = workCanvas.height;
+    clone.getContext('2d').drawImage(workCanvas, 0, 0);
+
+    const annotationsToDraw = draft.annotations.slice();
+    if(inProgressAnnotation) annotationsToDraw.push(inProgressAnnotation);
+    drawAnnotationsOnCanvas(clone, annotationsToDraw);
+
+    if(draft.timestamp.enabled) drawTimestamp(clone, draft.timestamp.mode, frames[editingIndex].time);
+    if(draft.text.text && draft.text.text.trim()) drawTextOverlay(clone, draft.text);
+
+    const {canvas: finalCanvas, inner} = applyBorderCanvas(clone, draft.style);
+    lastInner = inner;
+
+    editPreviewCanvas.width = finalCanvas.width;
+    editPreviewCanvas.height = finalCanvas.height;
+    editPreviewCanvas.getContext('2d').drawImage(finalCanvas, 0, 0);
   }
 
   function openEditModal(index){
     editingIndex = index;
-    editingStyle = frames[index].style || 'none';
-    editingRatio = frames[index].ratio || 'original';
-    styleButtons.forEach(b => b.classList.toggle('active', b.dataset.style === editingStyle));
-    ratioButtons.forEach(b => b.classList.toggle('active', b.dataset.ratio === editingRatio));
-    updateEditPreview();
+    const f = frames[index];
+    draft = {
+      ratio: f.ratio || 'original',
+      style: f.style || 'none',
+      filter: f.filter || 'none',
+      brightness: typeof f.brightness === 'number' ? f.brightness : 0,
+      contrast: typeof f.contrast === 'number' ? f.contrast : 0,
+      timestamp: f.timestamp ? Object.assign({}, f.timestamp) : {enabled: false, mode: 'video'},
+      text: f.text ? Object.assign({}, f.text) : {text: '', font: "'Barlow Condensed',sans-serif", position: 'bottom'},
+      annotations: f.annotations ? f.annotations.map(a => Object.assign({}, a)) : []
+    };
+    currentTool = 'none';
+    inProgressAnnotation = null;
+
+    ratioButtons.forEach(b => b.classList.toggle('active', b.dataset.ratio === draft.ratio));
+    styleButtons.forEach(b => b.classList.toggle('active', b.dataset.style === draft.style));
+    filterButtons.forEach(b => b.classList.toggle('active', b.dataset.filter === draft.filter));
+    toolButtons.forEach(b => b.classList.toggle('active', b.dataset.tool === 'none'));
+    brightnessSlider.value = draft.brightness;
+    contrastSlider.value = draft.contrast;
+    timestampToggle.checked = draft.timestamp.enabled;
+    timestampMode.value = draft.timestamp.mode;
+    overlayText.value = draft.text.text;
+    overlayFont.value = draft.text.font;
+    overlayPosition.value = draft.text.position;
+
+    rebuildWorkCanvas().then(renderPreview);
     editModal.classList.add('show');
   }
 
   function closeEditModal(){
     editModal.classList.remove('show');
     editingIndex = null;
+    workCanvas = null;
   }
+
+  ratioButtons.forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      ratioButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      draft.ratio = btn.dataset.ratio;
+      await rebuildWorkCanvas();
+      renderPreview();
+    });
+  });
 
   styleButtons.forEach(btn=>{
     btn.addEventListener('click', ()=>{
       styleButtons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      editingStyle = btn.dataset.style;
-      updateEditPreview();
+      draft.style = btn.dataset.style;
+      renderPreview();
     });
   });
 
-  ratioButtons.forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      ratioButtons.forEach(b => b.classList.remove('active'));
+  filterButtons.forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      filterButtons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      editingRatio = btn.dataset.ratio;
-      updateEditPreview();
+      draft.filter = btn.dataset.filter;
+      await rebuildWorkCanvas();
+      renderPreview();
     });
+  });
+
+  brightnessSlider.addEventListener('input', async ()=>{
+    draft.brightness = parseInt(brightnessSlider.value, 10);
+    await rebuildWorkCanvas();
+    renderPreview();
+  });
+
+  contrastSlider.addEventListener('input', async ()=>{
+    draft.contrast = parseInt(contrastSlider.value, 10);
+    await rebuildWorkCanvas();
+    renderPreview();
+  });
+
+  timestampToggle.addEventListener('change', ()=>{
+    draft.timestamp.enabled = timestampToggle.checked;
+    renderPreview();
+  });
+  timestampMode.addEventListener('change', ()=>{
+    draft.timestamp.mode = timestampMode.value;
+    renderPreview();
+  });
+
+  overlayText.addEventListener('input', ()=>{
+    draft.text.text = overlayText.value;
+    renderPreview();
+  });
+  overlayFont.addEventListener('change', ()=>{
+    draft.text.font = overlayFont.value;
+    renderPreview();
+  });
+  overlayPosition.addEventListener('change', ()=>{
+    draft.text.position = overlayPosition.value;
+    renderPreview();
+  });
+
+  toolButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      toolButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentTool = btn.dataset.tool;
+    });
+  });
+
+  undoAnnotationBtn.addEventListener('click', ()=>{
+    draft.annotations.pop();
+    renderPreview();
+  });
+  clearAnnotationBtn.addEventListener('click', ()=>{
+    draft.annotations = [];
+    renderPreview();
+  });
+
+  function getCanvasCoords(evt){
+    const rect = editPreviewCanvas.getBoundingClientRect();
+    const scaleX = editPreviewCanvas.width / rect.width;
+    const scaleY = editPreviewCanvas.height / rect.height;
+    return {
+      x: (evt.clientX - rect.left) * scaleX,
+      y: (evt.clientY - rect.top) * scaleY
+    };
+  }
+
+  function toContentNormalized(px, py){
+    const nx = (px - lastInner.x) / lastInner.w;
+    const ny = (py - lastInner.y) / lastInner.h;
+    return {nx: Math.min(1, Math.max(0, nx)), ny: Math.min(1, Math.max(0, ny))};
+  }
+
+  editPreviewCanvas.addEventListener('pointerdown', e=>{
+    if(currentTool === 'none') return;
+    const {x, y} = getCanvasCoords(e);
+    const {nx, ny} = toContentNormalized(x, y);
+    dragStart = {nx, ny};
+    dragging = true;
+  });
+
+  editPreviewCanvas.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    const {x, y} = getCanvasCoords(e);
+    const {nx, ny} = toContentNormalized(x, y);
+    inProgressAnnotation = {type: currentTool, x1: dragStart.nx, y1: dragStart.ny, x2: nx, y2: ny};
+    renderPreview();
+  });
+
+  window.addEventListener('pointerup', ()=>{
+    if(!dragging) return;
+    dragging = false;
+    if(inProgressAnnotation){
+      const dx = Math.abs(inProgressAnnotation.x2 - inProgressAnnotation.x1);
+      const dy = Math.abs(inProgressAnnotation.y2 - inProgressAnnotation.y1);
+      if(dx > 0.01 || dy > 0.01) draft.annotations.push(inProgressAnnotation);
+      inProgressAnnotation = null;
+      renderPreview();
+    }
   });
 
   editCancelBtn.addEventListener('click', closeEditModal);
 
-  editApplyBtn.addEventListener('click', async ()=>{
+  editApplyBtn.addEventListener('click', ()=>{
     if(editingIndex === null) return;
     const f = frames[editingIndex];
-    f.dataUrl = await composeFrame(f.original, editingRatio, editingStyle);
-    f.style = editingStyle;
-    f.ratio = editingRatio;
+    f.ratio = draft.ratio;
+    f.style = draft.style;
+    f.filter = draft.filter;
+    f.brightness = draft.brightness;
+    f.contrast = draft.contrast;
+    f.timestamp = Object.assign({}, draft.timestamp);
+    f.text = Object.assign({}, draft.text);
+    f.annotations = draft.annotations.map(a => Object.assign({}, a));
+    f.dataUrl = editPreviewCanvas.toDataURL('image/jpeg', 0.92);
     renderGallery();
     closeEditModal();
   });
@@ -1159,6 +1576,8 @@
     });
   }
 
+  let grabDownloadCount = 0;
+
   snapBtn.addEventListener('click', async ()=>{
     await waitUntilFrameReady();
     const dataUrl = captureFrame();
@@ -1168,6 +1587,10 @@
       addFrameToGallery(dataUrl, tc, timeSeconds);
       downloadFrame({dataUrl, tc}, frames.length - 1);
       showToast('Frame saved to your downloads');
+      grabDownloadCount++;
+      const snapBadge = document.getElementById('snapBadge');
+      snapBadge.textContent = grabDownloadCount;
+      snapBadge.style.display = 'flex';
     }
   });
 
