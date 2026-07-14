@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slopster: Stop Your AI Posters Looking Like AI Posters</title>
+<style>
+  :root{
+    --ink:#0B0B0C;
+    --ink-2:#151517;
+    --yellow:#F5C518;
+    --paper:#F4EEDD;
+    --red:#D6483E;
+    --grey:#9A9A9E;
+    --line:#2A2A2C;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:#EDEDEC;
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    line-height:1.5;
+    padding:0 0 80px;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:48px 24px 0;}
+
+  header{margin-bottom:48px;}
+  .eyebrow{
+    font-family:'Arial Black',sans-serif;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    font-size:12px;
+    color:var(--yellow);
+    margin:0 0 10px;
+  }
+  h1{
+    font-family:'Arial Black',sans-serif;
+    text-transform:uppercase;
+    font-size:clamp(40px,8vw,72px);
+    line-height:.92;
+    margin:0 0 16px;
+    letter-spacing:-.01em;
+  }
+  h1 span{color:var(--yellow);}
+  .sub{max-width:56ch;color:#C7C7C9;font-size:16px;margin:0;}
+
+  .step{
+    border-top:1px solid var(--line);
+    padding:32px 0;
+  }
+  .step-head{display:flex;align-items:baseline;gap:14px;margin-bottom:18px;}
+  .step-num{
+    font-family:'Arial Black',sans-serif;
+    color:var(--ink);
+    background:var(--yellow);
+    width:28px;height:28px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px;flex:none;
+  }
+  .step-title{font-size:20px;font-weight:700;margin:0;}
+  .step-help{color:var(--grey);font-size:14px;margin:4px 0 0 42px;max-width:60ch;}
+  .explain-text{
+    display:none;color:#D9C878;font-size:13px;margin:8px 0 0 42px;max-width:56ch;
+    padding-left:12px;border-left:2px solid var(--yellow);line-height:1.5;
+  }
+  body.explain-on .explain-text{display:block;}
+
+  .showcase{border-top:1px solid var(--line);padding:40px 0;}
+  .showcase-kicker{
+    font-family:'Arial Black';text-transform:uppercase;letter-spacing:.1em;
+    font-size:12px;color:var(--yellow);margin:0 0 8px;
+  }
+  .showcase-title{font-size:24px;margin:0 0 10px;line-height:1.2;}
+  .showcase-copy{color:#C7C7C9;font-size:15px;max-width:68ch;margin:0 0 20px;}
+
+  figure{margin:0;}
+  .single-figure img, .pair img{
+    width:100%;display:block;border-radius:8px;background:var(--ink-2);
+  }
+  .single-figure{max-width:480px;}
+  figcaption{color:var(--grey);font-size:13px;margin-top:10px;line-height:1.5;max-width:50ch;}
+
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  @media (max-width:640px){.pair{grid-template-columns:1fr;}}
+
+  .tag{
+    display:inline-block;font-family:'Arial Black';text-transform:uppercase;
+    font-size:10px;letter-spacing:.06em;padding:3px 8px;border-radius:4px;
+    margin-right:6px;position:relative;top:-1px;
+  }
+  .tag-before{background:rgba(214,72,62,.18);color:#F0A8A2;}
+  .tag-after{background:rgba(245,197,24,.18);color:var(--yellow);}
+
+  .prompt-reveal{margin-top:10px;}
+  .prompt-reveal summary{
+    cursor:pointer;font-size:12px;color:var(--grey);list-style:none;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .prompt-reveal summary::before{content:"+";color:var(--yellow);font-family:'Arial Black';}
+  .prompt-reveal[open] summary::before{content:"−";}
+  .prompt-reveal summary::-webkit-details-marker{display:none;}
+  .prompt-reveal pre{
+    white-space:pre-wrap;background:var(--ink-2);border:1px solid var(--line);
+    border-radius:8px;padding:14px;font-size:12px;color:#C7C7C9;line-height:1.6;
+    margin-top:10px;font-family:'Courier New',monospace;
+  }
+
+  .divider{border-top:1px solid var(--line);margin:8px 0 0;}
+  .tool-intro{padding:40px 0 8px;}
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(175px,1fr));
+    gap:12px;
+    margin-top:18px;
+  }
+  .card{
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px;
+    cursor:pointer;
+    transition:border-color .15s;
+  }
+  .card:hover{border-color:#555;}
+  .card.selected{border-color:var(--yellow);box-shadow:0 0 0 1px var(--yellow);}
+  .swatch{
+    height:120px;border-radius:6px;margin-bottom:10px;
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;position:relative;
+  }
+  .card p{margin:0;font-size:13px;font-weight:600;}
+  .card small{display:block;color:var(--grey);font-size:11px;margin-top:2px;}
+
+  /* mini style previews, no external images, same sample word across all six
+     so the typographic personality of each lineage is what's being compared */
+
+  .sw-swiss{background:#fff;}
+  .sw-swiss .grid-lines{position:absolute;inset:0;
+    background-image:linear-gradient(#00000014 1px,transparent 1px),linear-gradient(90deg,#00000014 1px,transparent 1px);
+    background-size:20px 20px;}
+  .sw-swiss .dot{position:absolute;top:10px;right:12px;width:18px;height:18px;border-radius:50%;background:#D6483E;}
+  .sw-swiss .bar{position:absolute;bottom:0;left:0;right:0;height:10px;background:#111;}
+  .sw-swiss .sample{font-family:Arial,sans-serif;font-weight:700;font-size:22px;color:#111;letter-spacing:-.5px;}
+
+  .sw-riso{background:#EDE6D6;}
+  .sw-riso .halftone{position:absolute;inset:0;
+    background-image:radial-gradient(#00000022 1px,transparent 1.4px);
+    background-size:6px 6px;}
+  .sw-riso .sample{position:absolute;font-family:'Arial Black';font-size:22px;letter-spacing:-.5px;}
+  .sw-riso .layer1{color:#3E7CB1;mix-blend-mode:multiply;transform:translate(-2px,-1px);}
+  .sw-riso .layer2{color:#D6483E;mix-blend-mode:multiply;transform:translate(2px,1px);}
+
+  .sw-brutal{background:#111;}
+  .sw-brutal .sample{font-family:'Arial Black';color:#fff;font-size:34px;letter-spacing:-1.5px;line-height:.9;}
+
+  .sw-vintage{background:#F2E4C4;}
+  .sw-vintage .sky{position:absolute;top:0;left:0;right:0;height:60%;background:#F2E4C4;}
+  .sw-vintage .ground{position:absolute;bottom:0;left:0;right:0;height:40%;background:#B97A3E;}
+  .sw-vintage .sun{position:absolute;width:36px;height:36px;border-radius:50%;background:#D9822B;top:14px;left:16px;}
+  .sw-vintage .sample{position:relative;font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:22px;color:#3B2A1A;}
+
+  .sw-xerox{background:#EDEDED;filter:contrast(1.5) grayscale(1);}
+  .sw-xerox .noise{position:absolute;inset:0;
+    background-image:repeating-linear-gradient(0deg,#00000018 0px,transparent 1px,transparent 3px);}
+  .sw-xerox .sample{font-family:'Arial Black';font-size:24px;color:#111;transform:rotate(-5deg);}
+
+  .sw-editorial{background:#fff;flex-direction:column;align-items:flex-start;padding:14px 16px;}
+  .sw-editorial .sample{font-family:Georgia,serif;font-weight:700;font-size:22px;color:#111;}
+  .sw-editorial .rule{width:100%;height:1px;background:#111;margin:6px 0 8px;}
+  .sw-editorial .cols{display:flex;gap:6px;width:100%;}
+  .sw-editorial .cols div{flex:1;height:26px;
+    background:repeating-linear-gradient(0deg,#999 0px,#999 1px,transparent 1px,transparent 4px);}
+
+  .colorgrid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:12px;margin-top:18px;
+  }
+  .colorchip{
+    cursor:pointer;padding:12px;border-radius:10px;
+    background:var(--ink-2);border:1px solid var(--line);
+  }
+  .colorchip.selected{border-color:var(--yellow);box-shadow:0 0 0 1px var(--yellow);}
+  .combo-swatches{display:flex;height:44px;border-radius:6px;overflow:hidden;margin-bottom:10px;}
+  .combo-swatches div{flex:1;}
+  .colorchip p{margin:0;font-size:13px;font-weight:600;}
+  .colorchip span{display:block;font-size:11px;color:var(--grey);margin-top:2px;}
+
+  label.field{display:block;margin-top:14px;}
+  label.field span{display:block;font-size:13px;color:var(--grey);margin-bottom:6px;}
+  input[type=text], textarea, select{
+    width:100%;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    color:#EDEDEC;
+    border-radius:8px;
+    padding:11px 12px;
+    font-size:14px;
+    font-family:inherit;
+  }
+  textarea{resize:vertical;min-height:64px;}
+
+  .fourth-toggle{
+    display:flex;align-items:center;gap:10px;margin-top:20px;
+    font-size:13px;color:var(--grey);cursor:pointer;
+  }
+  .fourth-toggle input{accent-color:var(--yellow);}
+  #fourthWrap{display:none;margin-top:10px;}
+  .warn-inline{color:var(--yellow);font-size:12px;margin-top:6px;}
+
+  .checklist{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;}
+  .checkitem{
+    display:flex;align-items:flex-start;gap:10px;
+    background:var(--ink-2);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-size:13px;cursor:pointer;
+  }
+  .checkitem input{accent-color:var(--red);margin-top:2px;}
+
+  select.aspect{max-width:280px;}
+
+  .generate-row{margin-top:32px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;}
+  button.gen{
+    font-family:'Arial Black';text-transform:uppercase;letter-spacing:.03em;
+    background:var(--yellow);color:var(--ink);border:none;
+    padding:16px 28px;border-radius:8px;font-size:15px;cursor:pointer;
+  }
+  button.gen:hover{filter:brightness(1.06);}
+  .req-note{color:var(--grey);font-size:12px;}
+
+  /* output receipt */
+  #outputSection{display:none;margin-top:36px;}
+  .receipt{
+    background:var(--paper);
+    color:#1B1B1B;
+    border-radius:2px;
+    padding:28px 24px 30px;
+    font-family:'Courier New',monospace;
+    font-size:13px;
+    line-height:1.65;
+    white-space:pre-wrap;
+    position:relative;
+    box-shadow:0 20px 40px rgba(0,0,0,.35);
+  }
+  .receipt::before, .receipt::after{
+    content:"";position:absolute;left:0;right:0;height:10px;
+    background:
+      radial-gradient(circle at 6px 5px, var(--ink) 5px, transparent 5.5px) repeat-x;
+    background-size:14px 10px;
+  }
+  .receipt::before{top:-5px;}
+  .receipt::after{bottom:-5px;transform:rotate(180deg);}
+
+  .out-actions{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;align-items:center;}
+  button.copy{
+    background:transparent;border:1px solid var(--line);color:#EDEDEC;
+    padding:10px 18px;border-radius:8px;font-size:13px;cursor:pointer;
+  }
+  button.copy:hover{border-color:var(--yellow);color:var(--yellow);}
+  .copied{color:var(--yellow);font-size:13px;}
+
+  .warning{
+    margin-top:20px;padding:16px 18px;border-radius:8px;
+    background:rgba(214,72,62,.1);border:1px solid rgba(214,72,62,.4);
+    font-size:13px;color:#F0B3AE;
+  }
+  .warning b{color:var(--red);}
+
+  footer{margin-top:60px;border-top:1px solid var(--line);padding-top:24px;color:var(--grey);font-size:12px;}
+
+  .modal-backdrop{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
+    align-items:center;justify-content:center;z-index:50;padding:24px;
+  }
+  .modal-backdrop.show{display:flex;}
+  .modal-card{
+    background:var(--ink-2);border:1px solid var(--line);border-top:3px solid var(--yellow);
+    border-radius:10px;padding:24px 24px 20px;max-width:360px;width:100%;
+    box-shadow:0 20px 50px rgba(0,0,0,.5);
+  }
+  .modal-card p{margin:0 0 18px;font-size:14px;color:#EDEDEC;line-height:1.5;}
+  .modal-card button{
+    font-family:'Arial Black';text-transform:uppercase;letter-spacing:.03em;
+    background:var(--yellow);color:var(--ink);border:none;
+    padding:10px 20px;border-radius:6px;font-size:13px;cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Ant Davis Tools</p>
+    <h1>SLOP<span>STER</span></h1>
+    <p class="sub">Every AI poster generator defaults to the same thing: chalk-texture type, a stock photo mid-jump, a rainbow of colours all shouting at once. That's not a limitation of the model. It's what happens when a prompt asks for a vibe instead of a design. Below are two posters built from the exact same brief, one from a few adjectives, one from an actual brief. Then a tool that writes the second kind for you.</p>
+  </header>
+
+  <section class="showcase">
+    <p class="showcase-kicker">The default</p>
+    <h2 class="showcase-title">What most prompts get you</h2>
+    <p class="showcase-copy">No named style, no colour limit, no hierarchy, nothing ruled out. This is what "make it fun and eye-catching" produces when the model has to fill in every gap itself.</p>
+    <figure class="single-figure">
+      <img src="images/before-waterfest.jpg" alt="Generic AI-generated water festival poster with cluttered text, stock photo and chalk texture">
+      <figcaption>Prompted with a handful of adjectives and no constraints. Chalk texture, drop shadow, a starburst, a stock photo doing the work an idea should be doing.</figcaption>
+    </figure>
+  </section>
+
+  <section class="showcase">
+    <p class="showcase-kicker">Same brief, two prompts</p>
+    <h2 class="showcase-title">The difference is entirely in the prompt</h2>
+    <p class="showcase-copy">Both of these were made for the same thing: a poster promoting a set of security awareness tools. One came from a vague, adjective-led request. The other from a prompt with a named style, a locked palette, three weighted facts, and a list of clichés ruled out. Same subject, same intent, same model.</p>
+    <div class="pair">
+      <figure>
+        <img src="images/before-owl.jpg" alt="Generic AI-generated security awareness poster featuring an anthropomorphic owl mascot, chalk texture and glow effects">
+        <figcaption><span class="tag tag-before">Before</span> No style named, no palette capped, no clichés ruled out. The model reaches for a mascot to carry the idea and a checklist of icons to fill the rest of the space.</figcaption>
+        <details class="prompt-reveal">
+          <summary>See the prompt</summary>
+          <pre>Make a bold, eye-catching poster for our security awareness tools. Something punchy that grabs attention, make it look cool and edgy, with a link to tools.secureculture.com. Should say "have you seen them" somewhere. Make the text pop.</pre>
+        </details>
+      </figure>
+      <figure>
+        <img src="images/after-toolbox.jpg" alt="Xerox punk style security awareness tools poster with pink and blue two colour palette and a toolbox illustration">
+        <figcaption><span class="tag tag-after">After</span> A named style, a two-colour cap, three weighted lines, and a toolbox doing the conceptual work instead of a stock photo or a mascot.</figcaption>
+        <details class="prompt-reveal">
+          <summary>See the prompt</summary>
+          <pre>Design a square, 1:1 ratio, for social poster.
+Style: DIY xerox/photocopy punk flyer aesthetic: high contrast black and white or two-tone, visible photocopier degradation and toner noise, cut-and-paste collage logic, deliberately rough alignment, no smooth gradients or clean vector polish.
+Palette: use only these colours, nothing else: Bubblegum pink (#E6789A), Cobalt (#3E7CB1).
+Copy: the only text on the poster is "Security Awareness Tools" as the headline, "Have you seen them?" as the date line, "tools.secureculture.com" as the location line. Nothing else. Give the headline the most visual weight, the date and location clearly secondary, sized and positioned so all of it reads instantly from a distance.
+Composition: strong hierarchy, deliberate negative space, no clutter. Every element on the page should earn its place.
+Do not include: bevel or emboss effects, chalk or grunge distressed texture on the type, starburst or comic-style callout shapes, background colour gradients, generic decorative icons unrelated to the subject (waves, palm trees, confetti) used as filler.
+Finish: crisp and intentional, like it was designed by a working graphic designer for this specific event, not generated from a generic template.</pre>
+        </details>
+      </figure>
+    </div>
+  </section>
+
+  <section class="showcase">
+    <p class="showcase-kicker">Built the same way</p>
+    <h2 class="showcase-title">Different styles, same discipline</h2>
+    <p class="showcase-copy">A named lineage, a locked palette, a capped message. The style changes completely between these two. The underlying prompt logic doesn't.</p>
+    <div class="pair">
+      <figure>
+        <img src="images/after-lighthouse.jpg" alt="Vintage travel poster style illustration for Cybersecurity Month featuring a lighthouse in forest green and signal yellow">
+        <figcaption>Mid-century travel poster lineage, two colours, and a lighthouse carrying the idea instead of a padlock icon standing in for it.</figcaption>
+        <details class="prompt-reveal">
+          <summary>See the prompt</summary>
+          <pre>Design a portrait poster, 2:3 ratio poster.
+Style: Mid-century vintage travel poster style: flat simplified colour blocks (no gradients, no photographic texture), a limited warm palette, confident hand-drawn linework, generous sky or negative space, lettering integrated into the illustration rather than sitting on top of it.
+Palette: use only these colours, nothing else: Forest green (#3B5C42), Signal yellow (#F5C518).
+Copy: the only text on the poster is "Cybersecurity month" as the headline, "All of October" as the date line, "Secure Culture Hub" as the location line. Nothing else. Give the headline the most visual weight, the date and location clearly secondary, sized and positioned so all of it reads instantly from a distance.
+Composition: strong hierarchy, deliberate negative space, no clutter. Every element on the page should earn its place.
+Do not include: drop shadows on text or objects, bevel or emboss effects, chalk or grunge distressed texture on the type, a stock photo of a person mid-action (jumping, splashing, cheering crowd), starburst or comic-style callout shapes, background colour gradients, generic decorative icons unrelated to the subject (waves, palm trees, confetti) used as filler, glow or neon light effects.
+Finish: crisp and intentional, like it was designed by a working graphic designer for this specific event, not generated from a generic template.</pre>
+        </details>
+      </figure>
+      <figure>
+        <img src="images/after-sdrs.jpg" alt="Xerox punk style recognition poster reading SDRs, well done on spotting the phishing emails, in maroon and orange">
+        <figcaption>The same xerox punk lineage used for a recognition callout. A short headline still carries full weight when the hierarchy underneath it is doing its job.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section class="tool-intro">
+    <p class="eyebrow" style="margin-bottom:8px;">Now build your own</p>
+    <h2 class="showcase-title" style="margin-bottom:10px;">Answer a few questions, get a prompt like the ones above</h2>
+    <p class="showcase-copy">Same logic every time: a real style, a locked palette, three weighted facts, a list of clichés ruled out. Written for you, not left to a mood.</p>
+    <label class="fourth-toggle" style="margin-top:16px;"><input type="checkbox" id="explainToggle"> Explain why each choice matters as I go</label>
+  </section>
+
+  <!-- STEP 1: STYLE -->
+  <div class="step">
+    <div class="step-head"><div class="step-num">1</div><h2 class="step-title">Pick a real design lineage</h2></div>
+    <p class="step-help">Not a mood. An actual visual tradition the model can imitate properly.</p>
+    <p class="explain-text">A vague word like "cool" or "fun" gets averaged into whatever the model has seen most, which is almost always the same chalk-texture, drop-shadow default. A named lineage gives it a real, coherent tradition to imitate instead of a mood to guess at.</p>
+    <div class="grid" id="styleGrid">
+      <div class="card" data-style="swiss">
+        <div class="swatch sw-swiss">
+          <div class="grid-lines"></div>
+          <div class="dot"></div>
+          <span class="sample">EVENT</span>
+          <div class="bar"></div>
+        </div>
+        <p>Swiss / International</p><small>Grid, one accent, Helvetica logic</small>
+      </div>
+      <div class="card" data-style="riso">
+        <div class="swatch sw-riso">
+          <div class="halftone"></div>
+          <span class="sample layer1">EVENT</span>
+          <span class="sample layer2">EVENT</span>
+        </div>
+        <p>Risograph</p><small>Flat inks, visible misregistration</small>
+      </div>
+      <div class="card" data-style="brutal">
+        <div class="swatch sw-brutal"><span class="sample">EVENT</span></div>
+        <p>Brutalist type-only</p><small>No imagery, type is the image</small>
+      </div>
+      <div class="card" data-style="vintage">
+        <div class="swatch sw-vintage">
+          <div class="sky"></div><div class="ground"></div><div class="sun"></div>
+          <span class="sample">Event</span>
+        </div>
+        <p>Vintage travel poster</p><small>Flat colour blocks, mid-century</small>
+      </div>
+      <div class="card" data-style="xerox">
+        <div class="swatch sw-xerox">
+          <div class="noise"></div>
+          <span class="sample">EVENT</span>
+        </div>
+        <p>Xerox / photocopy punk</p><small>High contrast, torn, DIY</small>
+      </div>
+      <div class="card" data-style="editorial">
+        <div class="swatch sw-editorial">
+          <span class="sample">Event</span>
+          <div class="rule"></div>
+          <div class="cols"><div></div><div></div><div></div></div>
+        </div>
+        <p>Editorial / newspaper</p><small>Hairline rules, dense columns</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: POSTER TYPE -->
+  <div class="step">
+    <div class="step-head"><div class="step-num">2</div><h2 class="step-title">What's this poster for?</h2></div>
+    <p class="step-help">This decides both the facts you'll fill in and how the palette names read further down.</p>
+    <p class="explain-text">A security callout and an event poster are driven by completely different information. Forcing both into "what, when, where" is why a lot of awareness content ends up reading like an invite rather than an instruction.</p>
+    <label class="field" style="max-width:340px;">
+      <span>Poster type</span>
+      <select id="posterType">
+        <option value="event">Event or announcement</option>
+        <option value="security">Phishing / risk callout</option>
+        <option value="training">Training or course promotion</option>
+        <option value="incident">Incident or breach alert</option>
+        <option value="policy">Policy or compliance reminder</option>
+        <option value="recognition">Recognition / shoutout</option>
+        <option value="custom">Custom, I'll label my own</option>
+      </select>
+    </label>
+  </div>
+
+  <!-- STEP 3: PALETTE -->
+  <div class="step">
+    <div class="step-head"><div class="step-num">3</div><h2 class="step-title">Lock the palette</h2></div>
+    <p class="step-help">Pick one combination. These are pairings that already work together, not a colour wheel to gamble on.</p>
+    <p class="explain-text">"Vibrant colours" invites the model to grab from its whole palette at once, which is how you end up with a rainbow gradient. Capping it to one named pair or trio, and giving that pair a name, is what makes it read as chosen rather than default.</p>
+    <div class="colorgrid" id="colorGrid"></div>
+  </div>
+
+  <!-- STEP 4: CONTENT -->
+  <div class="step">
+    <div class="step-head"><div class="step-num">4</div><h2 class="step-title">The facts that must appear</h2></div>
+    <p class="step-help">Fill in the three lines for the poster type you picked above.</p>
+    <p class="explain-text">Every extra line of copy competes for the same visual weight as the ones before it. Three facts is enough for almost anything. A fourth is possible, but it always costs some of the hierarchy the first three had.</p>
+
+    <div id="fieldSet"></div>
+
+    <label class="fourth-toggle"><input type="checkbox" id="fourthToggle"> Add a fourth line (only if it's essential)</label>
+    <div id="fourthWrap">
+      <label class="field"><span id="fourthLabel">Fourth line</span><input type="text" id="fFourth" placeholder=""></label>
+      <p class="warn-inline">Every extra line competes for the same visual weight. Adding this will push something else down the hierarchy.</p>
+    </div>
+  </div>
+
+  <!-- STEP 5: EXCLUSIONS -->
+  <div class="step">
+    <div class="step-head"><div class="step-num">5</div><h2 class="step-title">Ban the clichés</h2></div>
+    <p class="step-help">Checked items are excluded from the prompt. Untick anything you actually want.</p>
+    <p class="explain-text">These are the defaults a model reaches for when a prompt doesn't say otherwise: drop shadow, bevel, a stock photo of someone mid-jump. Naming them explicitly as things to avoid is often more effective than any amount of positive description.</p>
+    <div class="checklist" id="checklist">
+      <label class="checkitem"><input type="checkbox" checked value="drop shadows on text or objects"> Drop shadows</label>
+      <label class="checkitem"><input type="checkbox" checked value="bevel or emboss effects"> Bevel / emboss</label>
+      <label class="checkitem"><input type="checkbox" checked value="chalk or grunge distressed texture on the type"> Chalk / grunge texture</label>
+      <label class="checkitem"><input type="checkbox" checked value="a stock photo of a person mid-action (jumping, splashing, cheering crowd)"> Stock photo of a person</label>
+      <label class="checkitem"><input type="checkbox" checked value="starburst or comic-style callout shapes"> Starburst callouts</label>
+      <label class="checkitem"><input type="checkbox" checked value="background colour gradients"> Colour gradients</label>
+      <label class="checkitem"><input type="checkbox" checked value="generic decorative icons unrelated to the subject (waves, palm trees, confetti) used as filler"> Generic filler icons</label>
+      <label class="checkitem"><input type="checkbox" checked value="glow or neon light effects"> Glow / neon effects</label>
+    </div>
+  </div>
+
+  <!-- STEP 6: FORMAT -->
+  <div class="step">
+    <div class="step-head"><div class="step-num">6</div><h2 class="step-title">Format and anything else</h2></div>
+    <p class="explain-text">ChatGPT and DALLE read best from a written brief. Midjourney and Stable Diffusion read better as a comma-separated list of tags with their own negative-prompt syntax. Same choices, different shape.</p>
+    <label class="field" style="max-width:280px;">
+      <span>Which tool are you pasting this into?</span>
+      <select id="fTarget">
+        <option value="prose">ChatGPT / DALLE (written brief)</option>
+        <option value="midjourney">Midjourney (tags + parameters)</option>
+        <option value="sd">Stable Diffusion (tags + negative prompt)</option>
+      </select>
+    </label>
+    <label class="field" style="max-width:280px;">
+      <span>Aspect ratio</span>
+      <select id="fAspect" class="aspect">
+        <option value="portrait poster, 2:3 ratio">Portrait poster (2:3)</option>
+        <option value="square, 1:1 ratio, for social">Square social (1:1)</option>
+        <option value="landscape banner, 16:9 ratio">Landscape banner (16:9)</option>
+      </select>
+    </label>
+    <label class="field"><span>Anything else worth telling it? (optional)</span><textarea id="fExtra" placeholder="e.g. keep it printable in black and white, must work as a thumbnail"></textarea></label>
+  </div>
+
+  <div class="generate-row">
+    <button class="gen" id="genBtn">Generate prompt</button>
+    <button class="copy" id="linkBtn">Copy shareable link</button>
+    <span class="copied" id="linkCopiedMsg" style="display:none;">Link copied</span>
+    <span class="req-note">Fill in style, poster type, palette and the three facts first.</span>
+  </div>
+
+  <div id="outputSection">
+    <div class="receipt" id="receiptText"></div>
+    <div class="out-actions">
+      <button class="copy" id="copyBtn">Copy prompt</button>
+      <span class="copied" id="copiedMsg" style="display:none;">Copied</span>
+    </div>
+    <div class="warning">
+      <b>Check it before you use it.</b> This prompt is generated, not guaranteed clean. Read it back before pasting it anywhere: make sure nothing's contradicting itself, the facts are spelled correctly, and it actually says what you want it to say. That goes for any prompt any website hands you, not just this one.
+    </div>
+  </div>
+
+  <footer>Slopster. One of Ant Davis's free tools. Built to stop AI posters looking like AI posters.</footer>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal-card">
+    <p id="modalMessage"></p>
+    <button id="modalOk">OK</button>
+  </div>
+</div>
+
+<script>
+const styles = {
+  swiss: {
+    label: "Swiss/International Style",
+    directive: "Swiss International Style graphic design: strict underlying grid, generous negative space, a single sans-serif typeface family (Helvetica or Akzidenz-Grotesk logic) set with mathematical alignment, one accent colour used sparingly as a focal point, no illustration, no photography.",
+    type: "one grotesque sans family throughout, headline and supporting text in the same typeface at different weights, no serif, no script."
+  },
+  riso: {
+    label: "Risograph print",
+    directive: "Risograph print aesthetic: flat solid ink colours with visible slight misregistration between layers, halftone dot textures where colours overlap, matte uncoated paper look, hand-set feel, no gradients, no photorealistic rendering.",
+    type: "a bold slab or grotesk headline with visible print imperfection, paired with a plain grotesk for supporting text, nothing delicate or thin-stroked."
+  },
+  brutal: {
+    label: "Brutalist typography-only",
+    directive: "Brutalist typographic poster with no imagery at all: oversized type is the entire composition, harsh value contrast (near-black against near-white or a single raw accent), deliberately unpolished kerning treated as a feature, thick rules used as the only graphic device.",
+    type: "a single heavy grotesque weight used for everything, headline and supporting text the same family, size is the only hierarchy tool."
+  },
+  vintage: {
+    label: "Vintage travel poster",
+    directive: "Mid-century vintage travel poster style: flat simplified colour blocks (no gradients, no photographic texture), a limited warm palette, confident hand-drawn linework, generous sky or negative space, lettering integrated into the illustration rather than sitting on top of it.",
+    type: "hand-lettered or script-style headline integrated into the scene, paired with a simple slab serif for the smaller supporting lines."
+  },
+  xerox: {
+    label: "Xerox/photocopy punk",
+    directive: "DIY xerox/photocopy punk flyer aesthetic: high contrast black and white or two-tone, visible photocopier degradation and toner noise, cut-and-paste collage logic, deliberately rough alignment, no smooth gradients or clean vector polish.",
+    type: "a distressed grotesque or typewriter-style headline, cut-and-paste feel, supporting text can look stamped or typed rather than typeset."
+  },
+  editorial: {
+    label: "Editorial/newspaper",
+    directive: "Editorial newspaper-style layout: hairline rules dividing sections, a serif display headline paired with a plain utility sans for supporting text, dense column logic even where content is sparse, no colour beyond black, white and one restrained accent.",
+    type: "a serif display headline paired with a plain utility sans for supporting text and captions, the classic newspaper masthead pairing."
+  }
+};
+
+const combos = [
+  {name:"Rhubarb and Custard", mood:"warm, playful, high energy", altName:"Phishing Alert", altMood:"hazard-stripe urgency", colors:["#D6483E","#F5C518"]},
+  {name:"Strawberry Crumble", mood:"cosy, appetite, autumnal", altName:"Insider Threat", altMood:"warm, human, not a firewall problem", colors:["#C1443B","#F2C9A0","#7A3B2E"]},
+  {name:"Moroccan Sunset", mood:"rich, exotic, evening", altName:"Zero Day", altMood:"the one nobody saw coming", colors:["#D9822B","#7A1F3D","#1B2A4A"]},
+  {name:"Ink and Signal", mood:"bold, brand-forward, high contrast", altName:"Ransomware", altMood:"lock it down, sound the alarm", colors:["#0B0B0C","#F5C518"]},
+  {name:"Forest and Flame", mood:"grounded with one hot accent", altName:"Breach Response", altMood:"calm control room, one red alert", colors:["#2F4A38","#D6483E"]},
+  {name:"Seaside Postcard", mood:"nostalgic, coastal, sun-bleached", altName:"Public Wifi", altMood:"looks harmless, isn't", colors:["#3E7CB1","#F2E4C4","#D9822B"]},
+  {name:"Bubblegum and Slate", mood:"playful against something serious", altName:"Human Error", altMood:"friendly surface, still the biggest risk", colors:["#E6789A","#5B5E63"]},
+  {name:"Damson and Cream", mood:"quietly luxurious", altName:"Privileged Access", altMood:"the accounts worth protecting most", colors:["#4A2545","#F4EEDD"]},
+  {name:"Cobalt and Chalk", mood:"clean, corporate-safe, still confident", altName:"Blue Team", altMood:"steady, defensive, by the book", colors:["#1B2A4A","#F4EEDD"]}
+];
+
+let selectedStyle = null;
+let selectedCombo = null;
+
+const colorGrid = document.getElementById('colorGrid');
+combos.forEach(combo => {
+  const chip = document.createElement('div');
+  chip.className = 'colorchip';
+  chip.dataset.name = combo.name;
+  const swatchesHtml = combo.colors.map(hex => `<div style="background:${hex}"></div>`).join('');
+  chip.innerHTML = `<div class="combo-swatches">${swatchesHtml}</div><p>${combo.name}</p><span>${combo.mood}</span>`;
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.colorchip').forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    selectedCombo = combo;
+  });
+  colorGrid.appendChild(chip);
+});
+
+// swaps combo labels to cyber-framed names when the security callout type is active,
+// same colours underneath, just a label that fits the content
+function refreshComboLabels(){
+  const type = document.getElementById('posterType').value;
+  const useAlt = securityFamily.includes(type);
+  Array.from(colorGrid.children).forEach((chip, i) => {
+    const combo = combos[i];
+    chip.querySelector('p').textContent = useAlt ? combo.altName : combo.name;
+    chip.querySelector('span').textContent = useAlt ? combo.altMood : combo.mood;
+  });
+}
+
+document.querySelectorAll('#styleGrid .card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('#styleGrid .card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedStyle = card.dataset.style;
+  });
+});
+
+document.getElementById('fourthToggle').addEventListener('change', function(){
+  document.getElementById('fourthWrap').style.display = this.checked ? 'block' : 'none';
+});
+
+// in-UI notification, replaces the browser's native alert
+function showModal(message){
+  document.getElementById('modalMessage').textContent = message;
+  document.getElementById('modalBackdrop').classList.add('show');
+}
+document.getElementById('modalOk').addEventListener('click', () => {
+  document.getElementById('modalBackdrop').classList.remove('show');
+});
+document.getElementById('modalBackdrop').addEventListener('click', (e) => {
+  if (e.target.id === 'modalBackdrop') e.target.classList.remove('show');
+});
+
+// poster type field sets: what a poster needs to say depends on what it's for
+const securityFamily = ['security','training','incident','policy','recognition'];
+
+const fieldSets = {
+  event: {
+    fourthLabel: "Fourth line",
+    fourthPlaceholder: "e.g. Free entry before 6pm",
+    roles: ["headline", "date line", "location line"],
+    fields: [
+      {label:"What (headline / event name)", placeholder:"e.g. Water Fest"},
+      {label:"When", placeholder:"e.g. 12th September"},
+      {label:"Where", placeholder:"e.g. The Beach, Brighton"}
+    ]
+  },
+  security: {
+    fourthLabel: "Fourth line (e.g. a deadline or reference number)",
+    fourthPlaceholder: "e.g. Report by Friday",
+    roles: ["headline warning", "instruction line", "report or contact line"],
+    fields: [
+      {label:"The risk (what to watch for)", placeholder:"e.g. Fake HR email asking staff to reset their password"},
+      {label:"The action (don't click / verify first)", placeholder:"e.g. Don't click. Verify with IT before doing anything."},
+      {label:"Where to report or check", placeholder:"e.g. Forward to report@yourcompany.com"}
+    ]
+  },
+  training: {
+    fourthLabel: "Fourth line (e.g. duration or CPD credit)",
+    fourthPlaceholder: "e.g. Takes 15 minutes",
+    roles: ["headline", "how to join or deadline line", "link or contact line"],
+    fields: [
+      {label:"Course or topic (headline)", placeholder:"e.g. Spot the Phish: Module 3"},
+      {label:"How to join or deadline", placeholder:"e.g. Enrol by 30th September"},
+      {label:"Link or contact", placeholder:"e.g. learn.yourcompany.com"}
+    ]
+  },
+  incident: {
+    fourthLabel: "Fourth line (e.g. affected systems)",
+    fourthPlaceholder: "e.g. Email and VPN affected",
+    roles: ["headline", "instruction line", "report or update line"],
+    fields: [
+      {label:"What happened (headline)", placeholder:"e.g. Payroll system incident"},
+      {label:"What to do now", placeholder:"e.g. Don't log in until further notice"},
+      {label:"Where to get updates", placeholder:"e.g. status.yourcompany.com"}
+    ]
+  },
+  policy: {
+    fourthLabel: "Fourth line (e.g. who to ask)",
+    fourthPlaceholder: "e.g. Questions to IT Security",
+    roles: ["headline", "why it matters line", "deadline or contact line"],
+    fields: [
+      {label:"What's changing (headline)", placeholder:"e.g. New password policy"},
+      {label:"Why it matters", placeholder:"e.g. Protects your account from takeover"},
+      {label:"Deadline or contact", placeholder:"e.g. Live from 1st October"}
+    ]
+  },
+  recognition: {
+    fourthLabel: "Fourth line",
+    fourthPlaceholder: "e.g. Nominate someone next month",
+    roles: ["headline", "what they did line", "thank you line"],
+    fields: [
+      {label:"Who or which team (headline)", placeholder:"e.g. The Finance Team"},
+      {label:"What they did", placeholder:"e.g. Spotted and reported a live phishing attempt"},
+      {label:"Thank you line", placeholder:"e.g. That's exactly what keeps us safe"}
+    ]
+  },
+  custom: {
+    fourthLabel: "Fourth line",
+    fourthPlaceholder: "",
+    roles: null,
+    fields: [
+      {label:"Line 1, custom label", customLabel:true, placeholder:"e.g. Headline"},
+      {label:"Line 2, custom label", customLabel:true, placeholder:"e.g. Subhead"},
+      {label:"Line 3, custom label", customLabel:true, placeholder:"e.g. Call to action"}
+    ]
+  }
+};
+
+function renderFieldSet(){
+  const type = document.getElementById('posterType').value;
+  const set = fieldSets[type];
+  const wrap = document.getElementById('fieldSet');
+  wrap.innerHTML = '';
+
+  set.fields.forEach((f, i) => {
+    if (f.customLabel){
+      const row = document.createElement('div');
+      row.style.display = 'grid';
+      row.style.gridTemplateColumns = '1fr 2fr';
+      row.style.gap = '10px';
+      row.style.marginTop = '14px';
+      row.innerHTML = `
+        <label class="field" style="margin-top:0;"><span>Label ${i+1}</span><input type="text" class="customLabelInput" placeholder="${f.placeholder}"></label>
+        <label class="field" style="margin-top:0;"><span>Text</span><input type="text" class="customValueInput" placeholder="What this line says"></label>
+      `;
+      wrap.appendChild(row);
+    } else {
+      const label = document.createElement('label');
+      label.className = 'field';
+      label.innerHTML = `<span>${f.label}</span><input type="text" class="typedField" placeholder="${f.placeholder}">`;
+      wrap.appendChild(label);
+    }
+  });
+
+  document.getElementById('fourthLabel').textContent = set.fourthLabel;
+  document.getElementById('fFourth').placeholder = set.fourthPlaceholder;
+}
+document.getElementById('posterType').addEventListener('change', () => {
+  renderFieldSet();
+  refreshComboLabels();
+});
+renderFieldSet();
+refreshComboLabels();
+
+// explain-it mode, just toggles a body class the CSS keys off
+document.getElementById('explainToggle').addEventListener('change', function(){
+  document.body.classList.toggle('explain-on', this.checked);
+});
+
+// pulls the three (or four) fact lines out of the form as structured data,
+// used by all three prompt formats and by the shareable link
+function getFactLines(){
+  const type = document.getElementById('posterType').value;
+  const set = fieldSets[type];
+  let lines;
+  if (type === 'custom'){
+    const labels = Array.from(document.querySelectorAll('.customLabelInput')).map(i => i.value.trim());
+    const values = Array.from(document.querySelectorAll('.customValueInput')).map(i => i.value.trim());
+    lines = labels.map((l, i) => ({role: l ? l.toLowerCase() + ' line' : '', value: values[i]}));
+  } else {
+    const typed = Array.from(document.querySelectorAll('.typedField')).map(i => i.value.trim());
+    lines = set.roles.map((r, i) => ({role: r, value: typed[i]}));
+  }
+  const fourthOn = document.getElementById('fourthToggle').checked;
+  const fourth = document.getElementById('fFourth').value.trim();
+  if (fourthOn && fourth) lines.push({role: 'smaller fourth line', value: fourth});
+  return lines;
+}
+
+function ratioFromAspect(aspect){
+  const m = aspect.match(/(\d+):(\d+)/);
+  return m ? `${m[1]}:${m[2]}` : '1:1';
+}
+
+function buildProsePrompt(styleObj, comboDisplayName, colourList, factLines, excluded, extra, aspect){
+  const facts = factLines.map(f => `"${f.value}" as the ${f.role}`).join(', ');
+  let prompt = `Design a ${aspect} poster.\n\n`;
+  prompt += `Style: ${styleObj.directive}\n\n`;
+  prompt += `Typography: ${styleObj.type}\n\n`;
+  prompt += `Palette: "${comboDisplayName}", use only these colours, nothing else: ${colourList}.\n\n`;
+  prompt += `Copy: the only text on the poster is ${facts}. Nothing else. Give the first line the most visual weight, everything after it clearly secondary, sized and positioned so all of it reads instantly from a distance.\n\n`;
+  prompt += `Composition: strong hierarchy, deliberate negative space, no clutter. Every element on the page should earn its place.\n\n`;
+  if (excluded.length) prompt += `Do not include: ${excluded.join(', ')}.\n\n`;
+  if (extra) prompt += `Additional direction: ${extra}\n\n`;
+  prompt += `Finish: crisp and intentional, like it was designed by a working graphic designer for this specific brief, not generated from a generic template.`;
+  return prompt;
+}
+
+function buildMidjourneyPrompt(styleObj, comboDisplayName, colourList, factLines, excluded, extra, aspect){
+  const copyTags = factLines.map(f => `"${f.value}"`).join(', ');
+  const tags = [
+    copyTags,
+    styleObj.directive.split(':')[0].toLowerCase(),
+    styleObj.type,
+    `${comboDisplayName.toLowerCase()} colour palette, only ${colourList}`,
+    'strong typographic hierarchy',
+    'deliberate negative space',
+    'no clutter'
+  ];
+  if (extra) tags.push(extra);
+  let out = tags.join(', ');
+  if (excluded.length) out += ` --no ${excluded.join(', ')}`;
+  out += ` --ar ${ratioFromAspect(aspect)}`;
+  return out;
+}
+
+function buildSDPrompt(styleObj, comboDisplayName, colourList, factLines, excluded, extra, aspect){
+  const copyTags = factLines.map(f => `text "${f.value}"`).join(', ');
+  const tags = [
+    copyTags,
+    styleObj.directive.split(':')[0].toLowerCase(),
+    styleObj.type,
+    `${comboDisplayName.toLowerCase()} palette, only ${colourList}`,
+    'strong hierarchy', 'negative space', 'no clutter'
+  ];
+  if (extra) tags.push(extra);
+  let out = `Prompt: ${tags.join(', ')}\n\n`;
+  out += `Negative prompt: ${excluded.join(', ') || 'none specified'}\n\n`;
+  out += `Aspect ratio: ${ratioFromAspect(aspect)}`;
+  return out;
+}
+
+function generatePrompt(){
+  const type = document.getElementById('posterType').value;
+  const set = fieldSets[type];
+  const aspect = document.getElementById('fAspect').value;
+  const target = document.getElementById('fTarget').value;
+  const extra = document.getElementById('fExtra').value.trim();
+
+  if (!selectedStyle) { showModal('Pick a design style first.'); return false; }
+  if (!selectedCombo) { showModal('Pick a colour combination.'); return false; }
+
+  if (type === 'custom'){
+    const labels = Array.from(document.querySelectorAll('.customLabelInput')).map(i => i.value.trim());
+    const values = Array.from(document.querySelectorAll('.customValueInput')).map(i => i.value.trim());
+    if (labels.some(l => !l) || values.some(v => !v)) { showModal('Fill in a label and the text for all three lines.'); return false; }
+  } else {
+    const typed = Array.from(document.querySelectorAll('.typedField')).map(i => i.value.trim());
+    if (typed.some(v => !v)) { showModal('Fill in all three lines before generating.'); return false; }
+  }
+
+  const factLines = getFactLines();
+  const styleObj = styles[selectedStyle];
+  const colourList = selectedCombo.colors.join(', ');
+  const comboDisplayName = securityFamily.includes(type) ? selectedCombo.altName : selectedCombo.name;
+  const excluded = Array.from(document.querySelectorAll('#checklist input:checked')).map(i => i.value);
+
+  let prompt;
+  if (target === 'midjourney') prompt = buildMidjourneyPrompt(styleObj, comboDisplayName, colourList, factLines, excluded, extra, aspect);
+  else if (target === 'sd') prompt = buildSDPrompt(styleObj, comboDisplayName, colourList, factLines, excluded, extra, aspect);
+  else prompt = buildProsePrompt(styleObj, comboDisplayName, colourList, factLines, excluded, extra, aspect);
+
+  document.getElementById('receiptText').textContent = prompt;
+  document.getElementById('outputSection').style.display = 'block';
+  return true;
+}
+
+document.getElementById('genBtn').addEventListener('click', () => {
+  const ok = generatePrompt();
+  if (ok) document.getElementById('outputSection').scrollIntoView({behavior:'smooth', block:'start'});
+});
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const text = document.getElementById('receiptText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const msg = document.getElementById('copiedMsg');
+    msg.style.display = 'inline';
+    setTimeout(() => msg.style.display = 'none', 2000);
+  });
+});
+
+// shareable link: encodes every selection into one query param so a specific
+// combination can be bookmarked or sent to someone else and reopen the same way
+function getShareState(){
+  const type = document.getElementById('posterType').value;
+  let fields;
+  if (type === 'custom'){
+    fields = {
+      labels: Array.from(document.querySelectorAll('.customLabelInput')).map(i => i.value),
+      values: Array.from(document.querySelectorAll('.customValueInput')).map(i => i.value)
+    };
+  } else {
+    fields = { typed: Array.from(document.querySelectorAll('.typedField')).map(i => i.value) };
+  }
+  return {
+    style: selectedStyle,
+    combo: combos.findIndex(c => c === selectedCombo),
+    type: type,
+    fields: fields,
+    fourthOn: document.getElementById('fourthToggle').checked,
+    fourth: document.getElementById('fFourth').value,
+    excluded: Array.from(document.querySelectorAll('#checklist input')).map(i => i.checked),
+    aspect: document.getElementById('fAspect').value,
+    target: document.getElementById('fTarget').value,
+    extra: document.getElementById('fExtra').value
+  };
+}
+
+function applyShareState(state){
+  if (state.style){
+    const card = document.querySelector(`#styleGrid .card[data-style="${state.style}"]`);
+    if (card) card.click();
+  }
+  document.getElementById('posterType').value = state.type || 'event';
+  renderFieldSet();
+  refreshComboLabels();
+
+  if (typeof state.combo === 'number' && state.combo >= 0 && colorGrid.children[state.combo]){
+    colorGrid.children[state.combo].click();
+  }
+
+  if (state.fields){
+    if (state.fields.typed){
+      const inputs = document.querySelectorAll('.typedField');
+      state.fields.typed.forEach((v, i) => { if (inputs[i]) inputs[i].value = v; });
+    }
+    if (state.fields.labels){
+      const labelInputs = document.querySelectorAll('.customLabelInput');
+      const valueInputs = document.querySelectorAll('.customValueInput');
+      state.fields.labels.forEach((v, i) => { if (labelInputs[i]) labelInputs[i].value = v; });
+      state.fields.values.forEach((v, i) => { if (valueInputs[i]) valueInputs[i].value = v; });
+    }
+  }
+
+  if (state.fourthOn){
+    document.getElementById('fourthToggle').checked = true;
+    document.getElementById('fourthWrap').style.display = 'block';
+    document.getElementById('fFourth').value = state.fourth || '';
+  }
+
+  if (state.excluded){
+    const boxes = document.querySelectorAll('#checklist input');
+    state.excluded.forEach((checked, i) => { if (boxes[i]) boxes[i].checked = checked; });
+  }
+
+  if (state.aspect) document.getElementById('fAspect').value = state.aspect;
+  if (state.target) document.getElementById('fTarget').value = state.target;
+  if (state.extra) document.getElementById('fExtra').value = state.extra;
+}
+
+document.getElementById('linkBtn').addEventListener('click', () => {
+  const state = getShareState();
+  const encoded = encodeURIComponent(btoa(JSON.stringify(state)));
+  const url = `${location.origin}${location.pathname}?s=${encoded}`;
+  navigator.clipboard.writeText(url).then(() => {
+    const msg = document.getElementById('linkCopiedMsg');
+    msg.style.display = 'inline';
+    setTimeout(() => msg.style.display = 'none', 2500);
+  });
+});
+
+// on load, restore a shared configuration if the URL carries one
+(function restoreFromUrl(){
+  const params = new URLSearchParams(location.search);
+  const s = params.get('s');
+  if (!s) return;
+  try {
+    const state = JSON.parse(atob(decodeURIComponent(s)));
+    applyShareState(state);
+    generatePrompt();
+  } catch (e) {
+    // malformed link, ignore quietly rather than breaking the page
+  }
+})();
+</script>
+</body>
+</html>
