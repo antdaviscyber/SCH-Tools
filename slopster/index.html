@@ -13,6 +13,15 @@
     --red:#D6483E;
     --grey:#9A9A9E;
     --line:#2A2A2C;
+
+    /* type scale: five sizes, that's it. captions and labels share one
+       size, running copy shares another, headings share a third. */
+    --fs-micro:12px;
+    --fs-caption:13px;
+    --fs-body:15px;
+    --fs-subhead:16px;
+    --fs-heading:20px;
+    --fs-cta:16px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -30,7 +39,7 @@
     font-family:'Arial Black',sans-serif;
     letter-spacing:.14em;
     text-transform:uppercase;
-    font-size:12px;
+    font-size:var(--fs-caption);
     color:var(--yellow);
     margin:0 0 10px;
   }
@@ -43,7 +52,7 @@
     letter-spacing:-.01em;
   }
   h1 span{color:var(--yellow);}
-  .sub{max-width:56ch;color:#C7C7C9;font-size:16px;margin:0;}
+  .sub{max-width:56ch;color:#C7C7C9;font-size:var(--fs-body);margin:0;}
 
   .step{
     border-top:1px solid var(--line);
@@ -57,12 +66,12 @@
     width:28px;height:28px;
     border-radius:50%;
     display:flex;align-items:center;justify-content:center;
-    font-size:13px;flex:none;
+    font-size:var(--fs-caption);flex:none;
   }
-  .step-title{font-size:20px;font-weight:700;margin:0;}
-  .step-help{color:var(--grey);font-size:14px;margin:4px 0 0 42px;max-width:60ch;}
+  .step-title{font-size:var(--fs-heading);font-weight:700;margin:0;}
+  .step-help{color:var(--grey);font-size:var(--fs-body);margin:4px 0 0 42px;max-width:60ch;}
   .explain-text{
-    display:none;color:#D9C878;font-size:13px;margin:8px 0 0 42px;max-width:56ch;
+    display:none;color:#D9C878;font-size:var(--fs-body);margin:8px 0 0 42px;max-width:56ch;
     padding-left:12px;border-left:2px solid var(--yellow);line-height:1.5;
   }
   body.explain-on .explain-text{display:block;}
@@ -70,24 +79,24 @@
   .showcase{border-top:1px solid var(--line);padding:40px 0;}
   .showcase-kicker{
     font-family:'Arial Black';text-transform:uppercase;letter-spacing:.1em;
-    font-size:12px;color:var(--yellow);margin:0 0 8px;
+    font-size:var(--fs-caption);color:var(--yellow);margin:0 0 8px;
   }
-  .showcase-title{font-size:24px;margin:0 0 10px;line-height:1.2;}
-  .showcase-copy{color:#C7C7C9;font-size:15px;max-width:68ch;margin:0 0 20px;}
+  .showcase-title{font-size:var(--fs-heading);margin:0 0 10px;line-height:1.2;}
+  .showcase-copy{color:#C7C7C9;font-size:var(--fs-body);max-width:68ch;margin:0 0 20px;}
 
   figure{margin:0;}
   .single-figure img, .pair img{
     width:100%;display:block;border-radius:8px;background:var(--ink-2);
   }
   .single-figure{max-width:480px;}
-  figcaption{color:var(--grey);font-size:13px;margin-top:10px;line-height:1.5;max-width:50ch;}
+  figcaption{color:var(--grey);font-size:var(--fs-caption);margin-top:10px;line-height:1.5;max-width:50ch;}
 
   .pair{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
   @media (max-width:640px){.pair{grid-template-columns:1fr;}}
 
   .tag{
     display:inline-block;font-family:'Arial Black';text-transform:uppercase;
-    font-size:10px;letter-spacing:.06em;padding:3px 8px;border-radius:4px;
+    font-size:var(--fs-micro);letter-spacing:.06em;padding:3px 8px;border-radius:4px;
     margin-right:6px;position:relative;top:-1px;
   }
   .tag-before{background:rgba(214,72,62,.18);color:#F0A8A2;}
@@ -95,7 +104,7 @@
 
   .prompt-reveal{margin-top:10px;}
   .prompt-reveal summary{
-    cursor:pointer;font-size:12px;color:var(--grey);list-style:none;
+    cursor:pointer;font-size:var(--fs-caption);color:var(--grey);list-style:none;
     display:inline-flex;align-items:center;gap:6px;
   }
   .prompt-reveal summary::before{content:"+";color:var(--yellow);font-family:'Arial Black';}
@@ -103,12 +112,52 @@
   .prompt-reveal summary::-webkit-details-marker{display:none;}
   .prompt-reveal pre{
     white-space:pre-wrap;background:var(--ink-2);border:1px solid var(--line);
-    border-radius:8px;padding:14px;font-size:12px;color:#C7C7C9;line-height:1.6;
+    border-radius:8px;padding:14px;font-size:var(--fs-body);color:#C7C7C9;line-height:1.6;
     margin-top:10px;font-family:'Courier New',monospace;
   }
 
   .divider{border-top:1px solid var(--line);margin:8px 0 0;}
   .tool-intro{padding:40px 0 8px;}
+
+  .custom-palette{
+    margin-top:20px;padding:18px;border-radius:10px;
+    background:var(--ink-2);border:1px solid var(--line);
+  }
+  .custom-palette.active{border-color:var(--yellow);box-shadow:0 0 0 1px var(--yellow);}
+  .cp-title{margin:0 0 4px;font-size:var(--fs-subhead);font-weight:700;}
+  .cp-help{margin:0 0 16px;font-size:var(--fs-body);color:var(--grey);max-width:60ch;}
+
+  .cp-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;
+  }
+  @media (max-width:640px){.cp-grid{grid-template-columns:1fr;}}
+  .cp-cell{
+    background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px;
+  }
+  .cp-label{display:block;font-size:var(--fs-caption);color:var(--grey);margin-bottom:8px;}
+  .cp-input-row{display:flex;gap:8px;align-items:center;}
+  .cp-input-row input[type="text"]{
+    flex:1;min-width:0;background:var(--ink-2);border:1px solid var(--line);color:#EDEDEC;
+    border-radius:6px;padding:9px 10px;font-size:var(--fs-body);font-family:'Courier New',monospace;
+  }
+  .cp-color-input{
+    -webkit-appearance:none;appearance:none;
+    width:38px;height:38px;flex:none;border:1px solid var(--line);border-radius:8px;
+    padding:0;background:none;cursor:pointer;overflow:hidden;
+  }
+  .cp-color-input::-webkit-color-swatch-wrapper{padding:0;}
+  .cp-color-input::-webkit-color-swatch{border:none;border-radius:7px;}
+  .cp-color-input::-moz-color-swatch{border:none;border-radius:7px;}
+  .cp-suggestions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+  .cp-suggestion{
+    cursor:pointer;padding:8px;border-radius:8px;background:var(--ink);
+    border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:6px;
+    width:74px;
+  }
+  .cp-suggestion:hover{border-color:var(--yellow);}
+  .cp-suggestion .cp-pair-swatch{display:flex;width:100%;height:26px;border-radius:4px;overflow:hidden;}
+  .cp-suggestion .cp-pair-swatch div{flex:1;}
+  .cp-suggestion span{font-size:var(--fs-micro);color:var(--grey);text-align:center;}
 
   .grid{
     display:grid;
@@ -131,8 +180,8 @@
     display:flex;align-items:center;justify-content:center;
     overflow:hidden;position:relative;
   }
-  .card p{margin:0;font-size:13px;font-weight:600;}
-  .card small{display:block;color:var(--grey);font-size:11px;margin-top:2px;}
+  .card p{margin:0;font-size:var(--fs-subhead);font-weight:600;}
+  .card small{display:block;color:var(--grey);font-size:var(--fs-caption);margin-top:2px;}
 
   /* mini style previews, no external images, same sample word across all six
      so the typographic personality of each lineage is what's being compared */
@@ -185,11 +234,11 @@
   .colorchip.selected{border-color:var(--yellow);box-shadow:0 0 0 1px var(--yellow);}
   .combo-swatches{display:flex;height:44px;border-radius:6px;overflow:hidden;margin-bottom:10px;}
   .combo-swatches div{flex:1;}
-  .colorchip p{margin:0;font-size:13px;font-weight:600;}
-  .colorchip span{display:block;font-size:11px;color:var(--grey);margin-top:2px;}
+  .colorchip p{margin:0;font-size:var(--fs-subhead);font-weight:600;}
+  .colorchip span{display:block;font-size:var(--fs-caption);color:var(--grey);margin-top:2px;}
 
   label.field{display:block;margin-top:14px;}
-  label.field span{display:block;font-size:13px;color:var(--grey);margin-bottom:6px;}
+  label.field span{display:block;font-size:var(--fs-caption);color:var(--grey);margin-bottom:6px;}
   input[type=text], textarea, select{
     width:100%;
     background:var(--ink-2);
@@ -197,24 +246,24 @@
     color:#EDEDEC;
     border-radius:8px;
     padding:11px 12px;
-    font-size:14px;
+    font-size:var(--fs-body);
     font-family:inherit;
   }
   textarea{resize:vertical;min-height:64px;}
 
   .fourth-toggle{
     display:flex;align-items:center;gap:10px;margin-top:20px;
-    font-size:13px;color:var(--grey);cursor:pointer;
+    font-size:var(--fs-body);color:var(--grey);cursor:pointer;
   }
   .fourth-toggle input{accent-color:var(--yellow);}
   #fourthWrap{display:none;margin-top:10px;}
-  .warn-inline{color:var(--yellow);font-size:12px;margin-top:6px;}
+  .warn-inline{color:var(--yellow);font-size:var(--fs-caption);margin-top:6px;}
 
   .checklist{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;}
   .checkitem{
     display:flex;align-items:flex-start;gap:10px;
     background:var(--ink-2);border:1px solid var(--line);border-radius:8px;
-    padding:10px 12px;font-size:13px;cursor:pointer;
+    padding:10px 12px;font-size:var(--fs-body);cursor:pointer;
   }
   .checkitem input{accent-color:var(--red);margin-top:2px;}
 
@@ -224,10 +273,10 @@
   button.gen{
     font-family:'Arial Black';text-transform:uppercase;letter-spacing:.03em;
     background:var(--yellow);color:var(--ink);border:none;
-    padding:16px 28px;border-radius:8px;font-size:15px;cursor:pointer;
+    padding:16px 28px;border-radius:8px;font-size:var(--fs-cta);cursor:pointer;
   }
   button.gen:hover{filter:brightness(1.06);}
-  .req-note{color:var(--grey);font-size:12px;}
+  .req-note{color:var(--grey);font-size:var(--fs-caption);}
 
   /* output receipt */
   #outputSection{display:none;margin-top:36px;}
@@ -237,7 +286,7 @@
     border-radius:2px;
     padding:28px 24px 30px;
     font-family:'Courier New',monospace;
-    font-size:13px;
+    font-size:var(--fs-body);
     line-height:1.65;
     white-space:pre-wrap;
     position:relative;
@@ -255,19 +304,19 @@
   .out-actions{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;align-items:center;}
   button.copy{
     background:transparent;border:1px solid var(--line);color:#EDEDEC;
-    padding:10px 18px;border-radius:8px;font-size:13px;cursor:pointer;
+    padding:10px 18px;border-radius:8px;font-size:var(--fs-body);cursor:pointer;
   }
   button.copy:hover{border-color:var(--yellow);color:var(--yellow);}
-  .copied{color:var(--yellow);font-size:13px;}
+  .copied{color:var(--yellow);font-size:var(--fs-caption);}
 
   .warning{
     margin-top:20px;padding:16px 18px;border-radius:8px;
     background:rgba(214,72,62,.1);border:1px solid rgba(214,72,62,.4);
-    font-size:13px;color:#F0B3AE;
+    font-size:var(--fs-body);color:#F0B3AE;
   }
   .warning b{color:var(--red);}
 
-  footer{margin-top:60px;border-top:1px solid var(--line);padding-top:24px;color:var(--grey);font-size:12px;}
+  footer{margin-top:60px;border-top:1px solid var(--line);padding-top:24px;color:var(--grey);font-size:var(--fs-caption);}
 
   .modal-backdrop{
     display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
@@ -279,11 +328,11 @@
     border-radius:10px;padding:24px 24px 20px;max-width:360px;width:100%;
     box-shadow:0 20px 50px rgba(0,0,0,.5);
   }
-  .modal-card p{margin:0 0 18px;font-size:14px;color:#EDEDEC;line-height:1.5;}
+  .modal-card p{margin:0 0 18px;font-size:var(--fs-body);color:#EDEDEC;line-height:1.5;}
   .modal-card button{
     font-family:'Arial Black';text-transform:uppercase;letter-spacing:.03em;
     background:var(--yellow);color:var(--ink);border:none;
-    padding:10px 20px;border-radius:6px;font-size:13px;cursor:pointer;
+    padding:10px 20px;border-radius:6px;font-size:var(--fs-body);cursor:pointer;
   }
 </style>
 </head>
@@ -293,18 +342,8 @@
   <header>
     <p class="eyebrow">Ant Davis Tools</p>
     <h1>SLOP<span>STER</span></h1>
-    <p class="sub">Every AI poster generator defaults to the same thing: chalk-texture type, a stock photo mid-jump, a rainbow of colours all shouting at once. That's not a limitation of the model. It's what happens when a prompt asks for a vibe instead of a design. Below are two posters built from the exact same brief, one from a few adjectives, one from an actual brief. Then a tool that writes the second kind for you.</p>
+    <p class="sub">Most AI posters look the same because the prompt asks for a vibe instead of a design. Here's the same brief, run twice.</p>
   </header>
-
-  <section class="showcase">
-    <p class="showcase-kicker">The default</p>
-    <h2 class="showcase-title">What most prompts get you</h2>
-    <p class="showcase-copy">No named style, no colour limit, no hierarchy, nothing ruled out. This is what "make it fun and eye-catching" produces when the model has to fill in every gap itself.</p>
-    <figure class="single-figure">
-      <img src="images/before-waterfest.jpg" alt="Generic AI-generated water festival poster with cluttered text, stock photo and chalk texture">
-      <figcaption>Prompted with a handful of adjectives and no constraints. Chalk texture, drop shadow, a starburst, a stock photo doing the work an idea should be doing.</figcaption>
-    </figure>
-  </section>
 
   <section class="showcase">
     <p class="showcase-kicker">Same brief, two prompts</p>
@@ -336,32 +375,6 @@ Finish: crisp and intentional, like it was designed by a working graphic designe
     </div>
   </section>
 
-  <section class="showcase">
-    <p class="showcase-kicker">Built the same way</p>
-    <h2 class="showcase-title">Different styles, same discipline</h2>
-    <p class="showcase-copy">A named lineage, a locked palette, a capped message. The style changes completely between these two. The underlying prompt logic doesn't.</p>
-    <div class="pair">
-      <figure>
-        <img src="images/after-lighthouse.jpg" alt="Vintage travel poster style illustration for Cybersecurity Month featuring a lighthouse in forest green and signal yellow">
-        <figcaption>Mid-century travel poster lineage, two colours, and a lighthouse carrying the idea instead of a padlock icon standing in for it.</figcaption>
-        <details class="prompt-reveal">
-          <summary>See the prompt</summary>
-          <pre>Design a portrait poster, 2:3 ratio poster.
-Style: Mid-century vintage travel poster style: flat simplified colour blocks (no gradients, no photographic texture), a limited warm palette, confident hand-drawn linework, generous sky or negative space, lettering integrated into the illustration rather than sitting on top of it.
-Palette: use only these colours, nothing else: Forest green (#3B5C42), Signal yellow (#F5C518).
-Copy: the only text on the poster is "Cybersecurity month" as the headline, "All of October" as the date line, "Secure Culture Hub" as the location line. Nothing else. Give the headline the most visual weight, the date and location clearly secondary, sized and positioned so all of it reads instantly from a distance.
-Composition: strong hierarchy, deliberate negative space, no clutter. Every element on the page should earn its place.
-Do not include: drop shadows on text or objects, bevel or emboss effects, chalk or grunge distressed texture on the type, a stock photo of a person mid-action (jumping, splashing, cheering crowd), starburst or comic-style callout shapes, background colour gradients, generic decorative icons unrelated to the subject (waves, palm trees, confetti) used as filler, glow or neon light effects.
-Finish: crisp and intentional, like it was designed by a working graphic designer for this specific event, not generated from a generic template.</pre>
-        </details>
-      </figure>
-      <figure>
-        <img src="images/after-sdrs.jpg" alt="Xerox punk style recognition poster reading SDRs, well done on spotting the phishing emails, in maroon and orange">
-        <figcaption>The same xerox punk lineage used for a recognition callout. A short headline still carries full weight when the hierarchy underneath it is doing its job.</figcaption>
-      </figure>
-    </div>
-  </section>
-
   <div class="divider"></div>
 
   <section class="tool-intro">
@@ -371,9 +384,28 @@ Finish: crisp and intentional, like it was designed by a working graphic designe
     <label class="fourth-toggle" style="margin-top:16px;"><input type="checkbox" id="explainToggle"> Explain why each choice matters as I go</label>
   </section>
 
-  <!-- STEP 1: STYLE -->
+  <!-- STEP 1: POSTER TYPE -->
   <div class="step">
-    <div class="step-head"><div class="step-num">1</div><h2 class="step-title">Pick a real design lineage</h2></div>
+    <div class="step-head"><div class="step-num">1</div><h2 class="step-title">What's this poster for?</h2></div>
+    <p class="step-help">This decides the facts you'll fill in and how the palette names read further down. Worth settling first.</p>
+    <p class="explain-text">A security callout and an event poster are driven by completely different information. Forcing both into "what, when, where" is why a lot of awareness content ends up reading like an invite rather than an instruction.</p>
+    <label class="field" style="max-width:340px;">
+      <span>Poster type</span>
+      <select id="posterType">
+        <option value="event">Event or announcement</option>
+        <option value="security">Phishing / risk callout</option>
+        <option value="training">Training or course promotion</option>
+        <option value="incident">Incident or breach alert</option>
+        <option value="policy">Policy or compliance reminder</option>
+        <option value="recognition">Recognition / shoutout</option>
+        <option value="custom">Custom, I'll label my own</option>
+      </select>
+    </label>
+  </div>
+
+  <!-- STEP 2: STYLE -->
+  <div class="step">
+    <div class="step-head"><div class="step-num">2</div><h2 class="step-title">Pick a real design lineage</h2></div>
     <p class="step-help">Not a mood. An actual visual tradition the model can imitate properly.</p>
     <p class="explain-text">A vague word like "cool" or "fun" gets averaged into whatever the model has seen most, which is almost always the same chalk-texture, drop-shadow default. A named lineage gives it a real, coherent tradition to imitate instead of a mood to guess at.</p>
     <div class="grid" id="styleGrid">
@@ -423,31 +455,42 @@ Finish: crisp and intentional, like it was designed by a working graphic designe
     </div>
   </div>
 
-  <!-- STEP 2: POSTER TYPE -->
-  <div class="step">
-    <div class="step-head"><div class="step-num">2</div><h2 class="step-title">What's this poster for?</h2></div>
-    <p class="step-help">This decides both the facts you'll fill in and how the palette names read further down.</p>
-    <p class="explain-text">A security callout and an event poster are driven by completely different information. Forcing both into "what, when, where" is why a lot of awareness content ends up reading like an invite rather than an instruction.</p>
-    <label class="field" style="max-width:340px;">
-      <span>Poster type</span>
-      <select id="posterType">
-        <option value="event">Event or announcement</option>
-        <option value="security">Phishing / risk callout</option>
-        <option value="training">Training or course promotion</option>
-        <option value="incident">Incident or breach alert</option>
-        <option value="policy">Policy or compliance reminder</option>
-        <option value="recognition">Recognition / shoutout</option>
-        <option value="custom">Custom, I'll label my own</option>
-      </select>
-    </label>
-  </div>
-
   <!-- STEP 3: PALETTE -->
   <div class="step">
     <div class="step-head"><div class="step-num">3</div><h2 class="step-title">Lock the palette</h2></div>
-    <p class="step-help">Pick one combination. These are pairings that already work together, not a colour wheel to gamble on.</p>
+    <p class="step-help">Pick one combination, or set your own. Either way, capped at three.</p>
     <p class="explain-text">"Vibrant colours" invites the model to grab from its whole palette at once, which is how you end up with a rainbow gradient. Capping it to one named pair or trio, and giving that pair a name, is what makes it read as chosen rather than default.</p>
     <div class="colorgrid" id="colorGrid"></div>
+    <div class="custom-palette" id="customPalette">
+      <p class="cp-title">Your own colours</p>
+      <p class="cp-help">Enter a hex code and Slopster will suggest colours that are known to sit well against it. Or ignore the suggestions and enter your own second and third colours, brand colours work fine here.</p>
+      <div class="cp-grid">
+        <div class="cp-cell">
+          <span class="cp-label">Colour 1</span>
+          <div class="cp-input-row">
+            <input type="text" id="cpHex1" placeholder="#3E7CB1" maxlength="7">
+            <input type="color" class="cp-color-input" id="cpPicker1" value="#3E7CB1">
+          </div>
+        </div>
+        <div class="cp-cell">
+          <span class="cp-label">Colour 2 (optional)</span>
+          <div class="cp-input-row">
+            <input type="text" id="cpHex2" placeholder="#F5C518" maxlength="7">
+            <input type="color" class="cp-color-input" id="cpPicker2" value="#F5C518">
+          </div>
+        </div>
+        <div class="cp-cell">
+          <span class="cp-label">Colour 3 (optional)</span>
+          <div class="cp-input-row">
+            <input type="text" id="cpHex3" placeholder="" maxlength="7">
+            <input type="color" class="cp-color-input" id="cpPicker3" value="#000000">
+          </div>
+        </div>
+      </div>
+      <div class="cp-suggestions" id="cpSuggestions"></div>
+      <label class="field" style="max-width:260px;"><span>Name this palette (optional)</span><input type="text" id="cpName" placeholder="e.g. Brand Colours"></label>
+      <button class="copy" id="cpUseBtn" type="button">Use this palette</button>
+    </div>
   </div>
 
   <!-- STEP 4: CONTENT -->
@@ -591,6 +634,7 @@ combos.forEach(combo => {
   chip.innerHTML = `<div class="combo-swatches">${swatchesHtml}</div><p>${combo.name}</p><span>${combo.mood}</span>`;
   chip.addEventListener('click', () => {
     document.querySelectorAll('.colorchip').forEach(c => c.classList.remove('selected'));
+    document.getElementById('customPalette').classList.remove('active');
     chip.classList.add('selected');
     selectedCombo = combo;
   });
@@ -608,6 +652,116 @@ function refreshComboLabels(){
     chip.querySelector('span').textContent = useAlt ? combo.altMood : combo.mood;
   });
 }
+
+// custom palette: hex input, live suggestions, and a manual override of the preset combos
+function normalizeHex(str){
+  if (!str) return null;
+  let s = str.trim();
+  if (s[0] !== '#') s = '#' + s;
+  if (/^#([0-9A-Fa-f]{3})$/.test(s)){
+    s = '#' + s.slice(1).split('').map(c => c + c).join('');
+  }
+  return /^#([0-9A-Fa-f]{6})$/.test(s) ? s.toUpperCase() : null;
+}
+
+function hexToHsl(hex){
+  const r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h, s, l = (max+min)/2;
+  if (max === min){ h = 0; s = 0; }
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h = (g-b)/d + (g<b?6:0); break;
+      case g: h = (b-r)/d + 2; break;
+      default: h = (r-g)/d + 4;
+    }
+    h /= 6;
+  }
+  return [h*360, s*100, l*100];
+}
+
+function hslToHex(h, s, l){
+  h/=360; s/=100; l/=100;
+  let r, g, b;
+  if (s === 0){ r = g = b = l; }
+  else {
+    const hue2rgb = (p,q,t) => {
+      if (t<0) t+=1; if (t>1) t-=1;
+      if (t<1/6) return p+(q-p)*6*t;
+      if (t<1/2) return q;
+      if (t<2/3) return p+(q-p)*(2/3-t)*6;
+      return p;
+    };
+    const q = l < 0.5 ? l*(1+s) : l+s-l*s;
+    const p = 2*l-q;
+    r = hue2rgb(p,q,h+1/3); g = hue2rgb(p,q,h); b = hue2rgb(p,q,h-1/3);
+  }
+  const toHex = x => Math.round(x*255).toString(16).padStart(2,'0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+}
+
+function getSuggestions(hex){
+  const [h, s, l] = hexToHsl(hex);
+  const clampS = Math.max(s, 45);
+  const contrastL = l > 55 ? 12 : 92;
+  return [
+    {label:'Complementary', hex: hslToHex((h+180)%360, clampS, l)},
+    {label:'Analogous', hex: hslToHex((h+30)%360, clampS, l)},
+    {label:'Analogous', hex: hslToHex((h+330)%360, clampS, l)},
+    {label:'High contrast', hex: hslToHex(h, Math.min(s,20), contrastL)}
+  ];
+}
+
+// keeps the hex field and the native colour picker in step, either one can drive the other
+function syncFromHex(n){
+  const hex = normalizeHex(document.getElementById('cpHex' + n).value);
+  if (hex) document.getElementById('cpPicker' + n).value = hex;
+}
+function syncFromPicker(n){
+  const val = document.getElementById('cpPicker' + n).value.toUpperCase();
+  document.getElementById('cpHex' + n).value = val;
+  if (n === 1) renderSuggestions();
+}
+
+[1,2,3].forEach(n => {
+  document.getElementById('cpHex' + n).addEventListener('input', () => {
+    syncFromHex(n);
+    if (n === 1) renderSuggestions();
+  });
+  document.getElementById('cpPicker' + n).addEventListener('input', () => syncFromPicker(n));
+});
+
+function renderSuggestions(){
+  const hex1 = normalizeHex(document.getElementById('cpHex1').value);
+  const box = document.getElementById('cpSuggestions');
+  box.innerHTML = '';
+  if (!hex1) return;
+  getSuggestions(hex1).forEach(sug => {
+    const chip = document.createElement('div');
+    chip.className = 'cp-suggestion';
+    chip.innerHTML = `<div class="cp-pair-swatch"><div style="background:${hex1}"></div><div style="background:${sug.hex}"></div></div><span>${sug.label}</span>`;
+    chip.addEventListener('click', () => {
+      document.getElementById('cpHex2').value = sug.hex;
+      syncFromHex(2);
+    });
+    box.appendChild(chip);
+  });
+}
+
+document.getElementById('cpUseBtn').addEventListener('click', () => {
+  const hexes = [
+    normalizeHex(document.getElementById('cpHex1').value),
+    normalizeHex(document.getElementById('cpHex2').value),
+    normalizeHex(document.getElementById('cpHex3').value)
+  ].filter(Boolean);
+  if (hexes.length < 2){ showModal('Enter at least two valid hex colours, or pick a suggestion for colour 2.'); return; }
+  const name = document.getElementById('cpName').value.trim() || 'Custom palette';
+  selectedCombo = { name, altName: name, mood: 'your own colours', altMood: 'your own colours', colors: hexes };
+  document.querySelectorAll('.colorchip').forEach(c => c.classList.remove('selected'));
+  document.getElementById('customPalette').classList.add('active');
+});
 
 document.querySelectorAll('#styleGrid .card').forEach(card => {
   card.addEventListener('click', () => {
@@ -885,9 +1039,11 @@ function getShareState(){
   } else {
     fields = { typed: Array.from(document.querySelectorAll('.typedField')).map(i => i.value) };
   }
+  const comboIndex = combos.findIndex(c => c === selectedCombo);
   return {
     style: selectedStyle,
-    combo: combos.findIndex(c => c === selectedCombo),
+    combo: comboIndex,
+    customCombo: comboIndex === -1 && selectedCombo ? selectedCombo : null,
     type: type,
     fields: fields,
     fourthOn: document.getElementById('fourthToggle').checked,
@@ -908,7 +1064,17 @@ function applyShareState(state){
   renderFieldSet();
   refreshComboLabels();
 
-  if (typeof state.combo === 'number' && state.combo >= 0 && colorGrid.children[state.combo]){
+  if (state.customCombo){
+    selectedCombo = state.customCombo;
+    document.getElementById('cpName').value = state.customCombo.name;
+    const colors = state.customCombo.colors;
+    [1,2,3].forEach(n => {
+      document.getElementById('cpHex' + n).value = colors[n-1] || '';
+      syncFromHex(n);
+    });
+    renderSuggestions();
+    document.getElementById('customPalette').classList.add('active');
+  } else if (typeof state.combo === 'number' && state.combo >= 0 && colorGrid.children[state.combo]){
     colorGrid.children[state.combo].click();
   }
 
