@@ -1,6 +1,6 @@
 # AnyPNG
 
-A browser based HEIC/WEBP/AVIF to PNG converter. Part of SCH-Tools.
+A browser based HEIC/WEBP/AVIF to PNG converter. Part of tools.antdavis.com
 
 ## What it does
 
