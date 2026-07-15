@@ -85,13 +85,17 @@
   .showcase-copy{color:#C7C7C9;font-size:var(--fs-body);max-width:68ch;margin:0 0 20px;}
 
   figure{margin:0;}
-  .single-figure img, .pair img{
+  .single-figure img{
     width:100%;display:block;border-radius:8px;background:var(--ink-2);
+  }
+  .pair img{
+    width:100%;display:block;border-radius:8px;background:var(--ink-2);
+    aspect-ratio:4/3;object-fit:cover;
   }
   .single-figure{max-width:480px;}
   figcaption{color:var(--grey);font-size:var(--fs-caption);margin-top:10px;line-height:1.5;max-width:50ch;}
 
-  .pair{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
   @media (max-width:640px){.pair{grid-template-columns:1fr;}}
 
   .tag{
