@@ -1,316 +1,440 @@
 <!DOCTYPE html>
-<html lang="en-GB">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ant Davis Tools</title>
-<meta name="description" content="Small privacy-first utilities built by Ant Davis. Every tool runs locally in your browser.">
+<title>Tools — Ant Davis</title>
+<meta name="description" content="Practical tools built by Ant Davis. Free, client-side, no accounts.">
 <style>
-@font-face {
-  font-family: 'Barber Chop';
-  src: url('https://raw.githubusercontent.com/antdaviscyber/assets/main/BarberChop.otf') format('opentype');
-  font-display: swap;
-}
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500&display=swap');
+  @font-face {
+    font-family: 'Barber Chop';
+    src: url('https://raw.githubusercontent.com/antdaviscyber/assets/main/BarberChop.otf') format('opentype');
+    font-display: swap;
+  }
 
-:root {
-  --bg: #F5F2E7;
-  --ink: #17171A;
-  --body: #33321F;
-  --yellow: #FFD100;
-  --line: #E1DCC6;
-  --muted: #706C55;
-  --muted-2: #A29C7E;
-  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
+  :root {
+    --yellow: #FFD100;
+    --yellow-deep: #FFD000;
+    --ink: #0A0A0B;
+    --ink-soft: #4A4A4D;
+    --grey: #8C8C90;
+    --line: #E9E9EA;
+    --paper: #FFFFFF;
+    --card: #FCFCFB;
+    --mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
 
-* { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
 
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-mono);
-  min-height: 100vh;
-}
+  a { color: inherit; text-decoration: none; }
 
-.wrap {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 56px 24px 64px;
-}
+  /* ---------- HEADER BAR ---------- */
+  .bar {
+    background: var(--yellow);
+    border-bottom: 3px solid var(--ink);
+  }
+  .bar-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    font-family: 'Barber Chop', var(--sans);
+    font-size: 26px;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+  }
+  .bar-nav {
+    display: flex;
+    gap: 26px;
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .bar-nav a {
+    padding-bottom: 3px;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.15s ease;
+  }
+  .bar-nav a:hover { border-color: var(--ink); }
 
-.back {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--muted);
-  text-decoration: none;
-  letter-spacing: 0.3px;
-  margin-bottom: 40px;
-}
-.back:hover { color: var(--ink); }
-.back:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }
+  /* ---------- HERO ---------- */
+  .hero {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 76px 28px 56px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--grey);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    background: var(--yellow-deep);
+    border: 1.5px solid var(--ink);
+    border-radius: 50%;
+  }
+  .hero h1 {
+    font-family: 'Barber Chop', var(--sans);
+    font-size: clamp(38px, 6vw, 64px);
+    line-height: 1.02;
+    letter-spacing: 0.3px;
+    max-width: 12ch;
+  }
+  .hero p {
+    margin-top: 22px;
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 46ch;
+  }
 
-header {
-  margin-bottom: 44px;
-}
+  .runtime-note {
+    margin-top: 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    padding: 9px 14px;
+    border-radius: 4px;
+  }
+  .runtime-note b { color: var(--ink); }
 
-.kicker {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--muted-2);
-  margin: 0 0 14px;
-}
+  /* ---------- FEATURED ---------- */
+  .section-label {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 28px;
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--grey);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
 
-h1 {
-  font-family: 'Barber Chop', var(--font-mono);
-  font-weight: 400;
-  font-size: 44px;
-  color: var(--ink);
-  margin: 0 0 16px;
-  letter-spacing: 0.5px;
-  line-height: 1;
-}
+  .featured {
+    max-width: 1080px;
+    margin: 18px auto 0;
+    padding: 0 28px 8px;
+  }
+  .feature-card {
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    padding: 36px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 28px;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 140px;
+    height: 140px;
+    background: var(--yellow);
+    border-radius: 50%;
+    opacity: 0.5;
+    z-index: 0;
+  }
+  .feature-mark {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--ink);
+    color: var(--yellow);
+    padding: 5px 10px;
+    border-radius: 4px;
+    z-index: 1;
+    white-space: nowrap;
+    align-self: start;
+  }
+  .feature-body { z-index: 1; }
+  .feature-body h2 {
+    font-family: 'Barber Chop', var(--sans);
+    font-size: 30px;
+    margin-bottom: 10px;
+  }
+  .feature-body p {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 52ch;
+  }
+  .feature-status {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--grey);
+    margin-top: 12px;
+  }
+  .feature-cta {
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .btn {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--ink);
+    color: var(--yellow);
+    padding: 12px 20px;
+    border-radius: 6px;
+    white-space: nowrap;
+    border: 2px solid var(--ink);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .btn:hover { background: var(--yellow); color: var(--ink); }
 
-.rule {
-  width: 56px;
-  height: 4px;
-  background: var(--yellow);
-  border: none;
-  margin: 0 0 22px;
-}
+  /* ---------- GRID ---------- */
+  .grid {
+    max-width: 1080px;
+    margin: 20px auto 0;
+    padding: 0 28px 100px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 26px;
+    background: var(--card);
+    display: flex;
+    flex-direction: column;
+    min-height: 190px;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .card:hover {
+    border-color: var(--ink);
+    transform: translateY(-2px);
+  }
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  .card h3 {
+    font-family: 'Barber Chop', var(--sans);
+    font-size: 21px;
+    letter-spacing: 0.2px;
+  }
+  .status-dot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--grey);
+  }
+  .status-dot::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2FA84F;
+  }
+  .card p {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    flex: 1;
+  }
+  .card-link {
+    margin-top: 18px;
+    font-family: var(--mono);
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ink);
+    border-bottom: 1px solid var(--ink);
+    align-self: flex-start;
+    padding-bottom: 2px;
+  }
+  .card-link .arrow { transition: transform 0.15s ease; }
+  .card:hover .card-link .arrow { transform: translateX(3px); }
 
-.tagline {
-  font-family: var(--font-sans);
-  font-size: 15px;
-  color: var(--body);
-  line-height: 1.7;
-  max-width: 48ch;
-  margin: 0;
-}
+  /* ---------- FOOTER ---------- */
+  footer {
+    border-top: 3px solid var(--ink);
+    background: var(--yellow);
+  }
+  .footer-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 30px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .footer-brand {
+    font-family: 'Barber Chop', var(--sans);
+    font-size: 18px;
+  }
+  .footer-links {
+    display: flex;
+    gap: 22px;
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .footer-links a { border-bottom: 2px solid transparent; padding-bottom: 3px; }
+  .footer-links a:hover { border-color: var(--ink); }
 
-.manifest-head {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 0 10px;
-  border-bottom: 1px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--muted-2);
-  margin-bottom: 2px;
-}
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: 1fr; }
+    .feature-card {
+      grid-template-columns: 1fr;
+      text-align: left;
+    }
+    .feature-cta { align-items: flex-start; }
+    .bar-nav { gap: 16px; }
+    .footer-inner { flex-direction: column; align-items: flex-start; }
+  }
 
-.list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.row {
-  border-bottom: 1px solid var(--line);
-}
-
-.row-link,
-.row-dev {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 30px 4px 30px 20px;
-  text-decoration: none;
-  color: inherit;
-  border-left: 3px solid transparent;
-  transition: border-color .12s, padding-left .12s;
-}
-
-.row-link:hover,
-.row-link:focus-visible {
-  border-left-color: var(--yellow);
-  padding-left: 28px;
-}
-.row-link:focus-visible { outline: none; }
-
-.row-main { min-width: 0; }
-
-.row-name {
-  font-family: var(--font-mono);
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--ink);
-  margin: 0 0 10px;
-  letter-spacing: 0.2px;
-}
-.row-dev .row-name { color: var(--muted); }
-
-.row-desc {
-  font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 400;
-  color: var(--body);
-  line-height: 1.65;
-  margin: 0;
-  max-width: 50ch;
-}
-
-.row-credit {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--muted-2);
-  margin: 10px 0 0;
-}
-.row-credit a { color: var(--muted-2); }
-.row-link:hover .row-credit a { color: var(--ink); }
-
-.row-status {
-  flex-shrink: 0;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--muted-2);
-  white-space: nowrap;
-}
-.row-link:hover .row-status { color: var(--ink); }
-
-.tag-dev {
-  flex-shrink: 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--ink);
-  background: var(--yellow);
-  padding: 6px 10px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.tag-pending {
-  flex-shrink: 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  padding: 6px 10px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-footer {
-  margin-top: 52px;
-  padding-top: 20px;
-  border-top: 1px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--muted-2);
-  line-height: 1.8;
-}
-footer a { color: var(--muted); }
-footer a:hover { color: var(--ink); }
-
-@media (max-width: 480px) {
-  h1 { font-size: 34px; }
-  .row-name { font-size: 19px; }
-  .row-link, .row-dev { flex-direction: column; align-items: flex-start; gap: 12px; padding-top: 24px; padding-bottom: 24px; }
-}
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <a class="back" href="https://www.antdavis.com/">&larr; antdavis.com</a>
 
-  <header>
-    <p class="kicker">tools.antdavis.com</p>
-    <h1>Ant Davis Tools</h1>
-    <hr class="rule">
-    <p class="tagline">Small utilities I built to solve my own problems. Free to use, nothing leaves your browser.</p>
-  </header>
+<div class="bar">
+  <div class="bar-inner">
+    <div class="brand">ANT DAVIS</div>
+    <nav class="bar-nav">
+      <a href="https://antdavis.com">Home</a>
+      <a href="https://instagram.com/antdaviscyber">Instagram</a>
+      <a href="https://tiktok.com/@antdaviscyber">TikTok</a>
+    </nav>
+  </div>
+</div>
 
-  <div class="manifest-head">
-    <span>Tool</span>
-    <span>Status</span>
+<div class="hero">
+  <div class="eyebrow">Built by Ant Davis</div>
+  <h1>Tools</h1>
+  <p>Small, practical things I've built because the tool I needed didn't exist yet. Free, no accounts, no nonsense.</p>
+  <div class="runtime-note"><b>Runs client-side.</b> Nothing gets uploaded, nothing gets tracked. Not a pitch, just how I build.</div>
+</div>
+
+<div class="section-label">Featured</div>
+<div class="featured">
+  <div class="feature-card">
+    <div class="feature-mark">01 / FEATURED</div>
+    <div class="feature-body">
+      <h2>ExtRenew</h2>
+      <p>A recurring, 30-day permissions checkup for every other Chrome extension you've got installed. Plain-English explanations, a rating for each one, and it never phones home. Everything stays on your machine.</p>
+      <div class="feature-status">STATUS: Currently in private testing on the Chrome Web Store</div>
+    </div>
+    <div class="feature-cta">
+      <a class="btn" href="https://extrenew.com">Visit ExtRenew.com →</a>
+    </div>
+  </div>
+</div>
+
+<div class="section-label" style="margin-top:56px;">Also built</div>
+<div class="grid">
+
+  <div class="card">
+    <div class="card-top">
+      <h3>Slopster</h3>
+      <span class="status-dot">Live</span>
+    </div>
+    <p>A poster prompt generator, built to speed up the brainstorm before the design tool ever opens.</p>
+    <a class="card-link" href="https://antdaviscyber.github.io/SCH-Tools/slopster/">Open Slopster <span class="arrow">→</span></a>
   </div>
 
-  <ol class="list">
-    <li class="row">
-      <a class="row-link" href="https://extrenew.com">
-        <div class="row-main">
-          <p class="row-name">ExtRenew</p>
-          <p class="row-desc">A 30-day privacy audit for the extensions already sitting in your browser. Flags what's gone stale and what's watching more than it should. Take control of your browser extensions and don't let them hide.</p>
-          <p class="row-credit">Chrome extension &middot; Chrome Web Store</p>
-        </div>
-        <span class="row-status">open &rarr;</span>
-      </a>
-    </li>
-    <li class="row">
-      <a class="row-link" href="https://secureculture.com/">
-        <div class="row-main">
-          <p class="row-name">Capacity Case Calculator</p>
-          <p class="row-desc">Build the numbers behind a capacity case for your security awareness programme.</p>
-          <p class="row-credit">Developed by Ant Davis for the Secure Culture Hub &middot; secureculture.com</p>
-        </div>
-        <span class="row-status">open &rarr;</span>
-      </a>
-    </li>
-    <li class="row">
-      <a class="row-link" href="Slopster/">
-        <div class="row-main">
-          <p class="row-name">Slopster</p>
-          <p class="row-desc">Tired of your AI poster looking like everyone else's? Escape the AI slop with this poster prompt generator: named colour palettes, tight copy limits, and call-to-action fields built for security messaging rather than generic marketing copy. Make impactful posters that actually stand out.</p>
-        </div>
-        <span class="row-status">open &rarr;</span>
-      </a>
-    </li>
-    <li class="row">
-      <a class="row-link" href="FrameGrab/">
-        <div class="row-main">
-          <p class="row-name">FrameGrab</p>
-          <p class="row-desc">Step through a video and pull out still frames, entirely in the browser.</p>
-        </div>
-        <span class="row-status">open &rarr;</span>
-      </a>
-    </li>
-    <li class="row">
-      <a class="row-link" href="AnyPNG/">
-        <div class="row-main">
-          <p class="row-name">Convert AnyPNG</p>
-          <p class="row-desc">Convert HEIC photos to PNG. No upload, no waiting on someone else's server.</p>
-        </div>
-        <span class="row-status">open &rarr;</span>
-      </a>
-    </li>
-    <li class="row">
-      <a class="row-link" href="audio-convert/">
-        <div class="row-main">
-          <p class="row-name">Audio Convert</p>
-          <p class="row-desc">Convert m4a, aac, wav, ogg and flac to MP3 or WAV, entirely on your machine.</p>
-        </div>
-        <span class="row-status">open &rarr;</span>
-      </a>
-    </li>
-    <li class="row">
-      <div class="row-dev">
-        <div class="row-main">
-          <p class="row-name">Domain Age Checker</p>
-          <p class="row-desc">Check how old a domain is before you trust it.</p>
-        </div>
-        <span class="tag-dev">in development</span>
-      </div>
-    </li>
-  </ol>
+  <div class="card">
+    <div class="card-top">
+      <h3>FrameGrab</h3>
+      <span class="status-dot">Live</span>
+    </div>
+    <p>Pulls clean still frames out of video, right in the browser. No upload, no install.</p>
+    <a class="card-link" href="https://antdaviscyber.github.io/SCH-Tools/FrameGrab/">Open FrameGrab <span class="arrow">→</span></a>
+  </div>
 
-  <footer>
-    Every tool here runs client side. Nothing is uploaded, nothing is tracked.<br>
-    Built by <a href="https://www.antdavis.com/">Ant Davis</a>.
-  </footer>
+  <div class="card">
+    <div class="card-top">
+      <h3>AnyPNG</h3>
+      <span class="status-dot">Live</span>
+    </div>
+    <p>Converts HEIC and other image formats to PNG, entirely in the browser. No upload required.</p>
+    <a class="card-link" href="https://antdaviscyber.github.io/SCH-Tools/AnyPNG/">Open AnyPNG <span class="arrow">→</span></a>
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <h3>Audio Convert</h3>
+      <span class="status-dot">Live</span>
+    </div>
+    <p>Converts m4a, aac, wav, ogg, and flac to MP3 or WAV, entirely on your machine.</p>
+    <a class="card-link" href="https://antdaviscyber.github.io/SCH-Tools/audio-convert/">Open Audio Convert <span class="arrow">→</span></a>
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <h3>Capacity Calculator</h3>
+      <span class="status-dot">Live</span>
+    </div>
+    <p>Works out realistic security awareness capacity, whether you're running the programme solo or as a team. Built for the Secure Culture Hub.</p>
+    <a class="card-link" href="https://secureculture.com">Open on secureculture.com <span class="arrow">→</span></a>
+  </div>
+
 </div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">ANT DAVIS CYBER</div>
+    <div class="footer-links">
+      <a href="https://instagram.com/antdaviscyber">Instagram</a>
+      <a href="https://tiktok.com/@antdaviscyber">TikTok</a>
+      <a href="https://linkedin.com/in/antdaviscyber">LinkedIn</a>
+    </div>
+  </div>
+</footer>
+
 </body>
 </html>
