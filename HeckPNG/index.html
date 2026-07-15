@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HeckPNG - SCH-Tools</title>
+<title>AnyPNG - SCH-Tools</title>
 <style>
   @font-face {
     font-family: 'Barber Chop';
@@ -237,21 +237,23 @@
 <body>
 
 <header>
-  <div class="mark">SCH-Tools / <strong>HeckPNG</strong></div>
+  <div class="mark">SCH-Tools / <strong>AnyPNG</strong></div>
   <div class="mark">antdaviscyber</div>
 </header>
 
-<h1>HEIC <span class="swap">&rarr;</span> PNG</h1>
-<p class="sub">Drop iPhone photos in. Get PNGs out. Nothing leaves this browser tab, every conversion happens on your machine.</p>
+<h1>HEIC / WEBP / AVIF <span class="swap">&rarr;</span> PNG</h1>
+<p class="sub">Drop iPhone photos, WEBP or AVIF images in. Get PNGs out. Nothing leaves this browser tab, every conversion happens on your machine.</p>
 
 <div class="dropzone" id="dropzone">
   <div class="stamp">
     <span class="tag active">HEIC</span>
+    <span class="tag active">WEBP</span>
+    <span class="tag active">AVIF</span>
     <span>&rarr;</span>
     <span class="tag">PNG</span>
   </div>
   <div class="instructions">Click to browse, or drag files here</div>
-  <input type="file" id="fileInput" accept=".heic,.heif,image/heic,image/heif" multiple>
+  <input type="file" id="fileInput" accept=".heic,.heif,.webp,.avif,image/heic,image/heif,image/webp,image/avif" multiple>
 </div>
 
 <div class="list" id="list"></div>
@@ -262,7 +264,7 @@
 </div>
 
 <div class="note">
-  Conversion runs client-side using heic2any. Large batches (20+ files) may take a moment, HEIC decoding is not instant. If a file fails, it's usually because it's already a JPEG or PNG wearing a .heic extension.
+  HEIC files are decoded with heic2any. WEBP and AVIF files are decoded natively through canvas, so those convert almost instantly. Large HEIC batches (20+ files) may take a moment. AVIF decoding depends on your browser, current Chrome, Edge and Firefox handle it, older Safari versions may not. If a file fails, it's usually already a JPEG or PNG wearing the wrong extension.
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
@@ -302,15 +304,21 @@
     fileInput.value = '';
   });
 
+  function detectKind(file) {
+    if (/\.(heic|heif)$/i.test(file.name) || /image\/hei(c|f)/i.test(file.type)) return 'heic';
+    if (/\.webp$/i.test(file.name) || /image\/webp/i.test(file.type)) return 'webp';
+    if (/\.avif$/i.test(file.name) || /image\/avif/i.test(file.type)) return 'avif';
+    return null;
+  }
+
   function handleFiles(fileList) {
-    const files = Array.from(fileList).filter(f =>
-      /\.(heic|heif)$/i.test(f.name) || /image\/hei(c|f)/i.test(f.type)
-    );
+    const files = Array.from(fileList).filter(f => detectKind(f) !== null);
     if (files.length === 0) return;
 
     files.forEach(file => {
       const id = crypto.randomUUID();
-      items.push({ id, file, status: 'queued', blobUrl: null, blob: null, outName: file.name.replace(/\.(heic|heif)$/i, '.png') });
+      const kind = detectKind(file);
+      items.push({ id, file, kind, status: 'queued', blobUrl: null, blob: null, outName: file.name.replace(/\.(heic|heif|webp|avif)$/i, '.png') });
     });
 
     render();
@@ -337,14 +345,42 @@
     }).join('');
   }
 
+  function convertViaCanvas(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob(blob => {
+          URL.revokeObjectURL(objectUrl);
+          blob ? resolve(blob) : reject(new Error('canvas export failed'));
+        }, 'image/png');
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('image decode failed, likely unsupported by this browser'));
+      };
+      img.src = objectUrl;
+    });
+  }
+
   async function processQueue() {
     for (const item of items) {
       if (item.status !== 'queued') continue;
       item.status = 'converting';
       render();
       try {
-        const resultBlob = await heic2any({ blob: item.file, toType: 'image/png' });
-        const finalBlob = Array.isArray(resultBlob) ? resultBlob[0] : resultBlob;
+        let finalBlob;
+        if (item.kind === 'heic') {
+          const resultBlob = await heic2any({ blob: item.file, toType: 'image/png' });
+          finalBlob = Array.isArray(resultBlob) ? resultBlob[0] : resultBlob;
+        } else if (item.kind === 'webp' || item.kind === 'avif') {
+          finalBlob = await convertViaCanvas(item.file);
+        }
         item.blob = finalBlob;
         item.blobUrl = URL.createObjectURL(finalBlob);
         item.status = 'done';
