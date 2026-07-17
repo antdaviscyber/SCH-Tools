@@ -163,6 +163,29 @@
   .cp-suggestion .cp-pair-swatch div{flex:1;}
   .cp-suggestion span{font-size:var(--fs-micro);color:var(--grey);text-align:center;}
 
+  .bg-picker{margin-top:20px;padding-top:20px;border-top:1px solid var(--line);}
+  .bg-picker-label{font-size:var(--fs-body);font-weight:700;margin:0 0 8px;}
+  .bg-swatches{display:flex;gap:12px;margin-top:10px;}
+  .bg-swatch{
+    width:48px;height:48px;border-radius:10px;cursor:pointer;
+    border:2px solid var(--line);position:relative;
+  }
+  .bg-swatch.selected{border-color:var(--yellow);box-shadow:0 0 0 1px var(--yellow);}
+  .bg-swatch.selected::after{
+    content:"BG";position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);
+    font-size:10px;color:var(--yellow);font-family:'Arial Black';letter-spacing:.05em;
+  }
+  .bg-neutral-label{font-size:var(--fs-caption);color:var(--grey);margin:24px 0 0;}
+  .bg-neutral{opacity:.85;}
+  .bg-neutral:hover{opacity:1;}
+
+  .ratio-checker{display:flex;align-items:flex-end;gap:14px;margin:14px 0 20px;}
+  .ratio-box{
+    background:var(--ink-2);border:1px solid var(--line);border-radius:4px;
+    width:64px;height:64px;transition:aspect-ratio .15s;
+  }
+  .ratio-label{font-size:var(--fs-caption);color:var(--grey);}
+
   .grid{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(175px,1fr));
@@ -352,28 +375,28 @@
   <section class="showcase">
     <p class="showcase-kicker">Same brief, two prompts</p>
     <h2 class="showcase-title">The difference is entirely in the prompt</h2>
-    <p class="showcase-copy">Both of these were made for the same thing: a poster promoting a set of security awareness tools. One came from a vague, adjective-led request. The other from a prompt with a named style, a locked palette, three weighted facts, and a list of clichés ruled out. Same subject, same intent, same model.</p>
+    <p class="showcase-copy">Both of these were made for the same thing: a poster recognising someone on the team who spotted and reported a phishing email. One came from a vague, adjective-led request. The other from a prompt with a named style, a locked palette, three weighted facts, and a list of clichés ruled out. Same subject, same intent, same model.</p>
     <div class="pair">
       <figure>
-        <img src="images/before-owl.jpg" alt="Generic AI-generated security awareness poster featuring an anthropomorphic owl mascot, chalk texture and glow effects">
-        <figcaption><span class="tag tag-before">Before</span> No style named, no palette capped, no clichés ruled out. The model reaches for a mascot to carry the idea and a checklist of icons to fill the rest of the space.</figcaption>
+        <img src="images/before-bob.jpg" alt="Generic AI-generated shoutout poster featuring a cartoon dog mascot in sunglasses, confetti and glow effects">
+        <figcaption><span class="tag tag-before">Before</span> No style named, no palette capped, no clichés ruled out. The model reaches for a mascot and a pile of stars and confetti to carry the enthusiasm instead of the design.</figcaption>
         <details class="prompt-reveal">
           <summary>See the prompt</summary>
-          <pre>Make a bold, eye-catching poster for our security awareness tools. Something punchy that grabs attention, make it look cool and edgy, with a link to tools.secureculture.com. Should say "have you seen them" somewhere. Make the text pop.</pre>
+          <pre>Make a fun poster celebrating someone who reported a phishing email. Make it feel like a shoutout.</pre>
         </details>
       </figure>
       <figure>
-        <img src="images/after-toolbox.jpg" alt="Xerox punk style security awareness tools poster with pink and blue two colour palette and a toolbox illustration">
-        <figcaption><span class="tag tag-after">After</span> A named style, a two-colour cap, three weighted lines, and a toolbox doing the conceptual work instead of a stock photo or a mascot.</figcaption>
+        <img src="images/after-financeteam.jpg" alt="Xerox punk style recognition poster reading The Finance Team in burnt orange and damson on an off white background">
+        <figcaption><span class="tag tag-after">After</span> A named style, a capped palette with the background explicitly set, three weighted lines, and a hook-and-envelope illustration doing the conceptual work instead of a mascot.</figcaption>
         <details class="prompt-reveal">
           <summary>See the prompt</summary>
           <pre>Design a square, 1:1 ratio, for social poster.
-Style: DIY xerox/photocopy punk flyer aesthetic: high contrast black and white or two-tone, visible photocopier degradation and toner noise, cut-and-paste collage logic, deliberately rough alignment, no smooth gradients or clean vector polish.
-Palette: use only these colours, nothing else: Bubblegum pink (#E6789A), Cobalt (#3E7CB1).
-Copy: the only text on the poster is "Security Awareness Tools" as the headline, "Have you seen them?" as the date line, "tools.secureculture.com" as the location line. Nothing else. Give the headline the most visual weight, the date and location clearly secondary, sized and positioned so all of it reads instantly from a distance.
-Composition: strong hierarchy, deliberate negative space, no clutter. Every element on the page should earn its place.
-Do not include: bevel or emboss effects, chalk or grunge distressed texture on the type, starburst or comic-style callout shapes, background colour gradients, generic decorative icons unrelated to the subject (waves, palm trees, confetti) used as filler.
-Finish: crisp and intentional, like it was designed by a working graphic designer for this specific event, not generated from a generic template.</pre>
+Style: DIY xerox/photocopy punk flyer aesthetic: high contrast, visible photocopier degradation and toner noise, cut-and-paste collage logic, deliberately rough alignment, no smooth gradients or clean vector polish.
+Palette: use only these colours, nothing else: Off white (#F4EEDD) as the dominant background, Burnt orange (#D9822B) and Damson (#7A1F3D) as accents.
+Copy: the only text on the poster is "The Finance Team" as the headline, "Spotted and reported a live phishing attempt" as the what-they-did line, "That's exactly what keeps us safe" as the thank you line. Nothing else.
+Composition: strong hierarchy, deliberate negative space, no clutter.
+Do not include: bevel effects, chalk texture, stock photos, starburst shapes, gradients, glow effects.
+Finish: crisp and intentional, like it was designed by a working graphic designer for this specific brief, not generated from a generic template.</pre>
         </details>
       </figure>
     </div>
@@ -405,6 +428,15 @@ Finish: crisp and intentional, like it was designed by a working graphic designe
         <option value="custom">Custom, I'll label my own</option>
       </select>
     </label>
+    <label class="field" style="max-width:340px;">
+      <span>Where's this actually going?</span>
+      <select id="fMedium">
+        <option value="digital">On screens (social, digital signage)</option>
+        <option value="print">Print (posters, handouts)</option>
+        <option value="both">Both, keep it safe for either</option>
+      </select>
+    </label>
+    <p class="explain-text">Screens can fake glow and backlit colour. Ink can't. This just tells the model which one it's actually rendering for, so it doesn't describe an effect that won't survive being printed.</p>
   </div>
 
   <!-- STEP 2: STYLE -->
@@ -495,6 +527,14 @@ Finish: crisp and intentional, like it was designed by a working graphic designe
       <label class="field" style="max-width:260px;"><span>Name this palette (optional)</span><input type="text" id="cpName" placeholder="e.g. Brand Colours"></label>
       <button class="copy" id="cpUseBtn" type="button">Use this palette</button>
     </div>
+
+    <div class="bg-picker" id="bgPicker" style="display:none;">
+      <p class="bg-picker-label">Which one is the background?</p>
+      <p class="explain-text" style="margin-left:0;">Left as a plain colour list, the model has to guess which one carries the whole poster and which are just accents. It often guesses the darkest one, even when that's not what you meant.</p>
+      <div class="bg-swatches" id="bgSwatches"></div>
+      <p class="bg-neutral-label">Or swap the background for a safe neutral</p>
+      <div class="bg-swatches" id="bgNeutrals"></div>
+    </div>
   </div>
 
   <!-- STEP 4: CONTENT -->
@@ -541,14 +581,20 @@ Finish: crisp and intentional, like it was designed by a working graphic designe
         <option value="sd">Stable Diffusion (tags + negative prompt)</option>
       </select>
     </label>
-    <label class="field" style="max-width:280px;">
+    <label class="field" style="max-width:340px;">
       <span>Aspect ratio</span>
       <select id="fAspect" class="aspect">
-        <option value="portrait poster, 2:3 ratio">Portrait poster (2:3)</option>
-        <option value="square, 1:1 ratio, for social">Square social (1:1)</option>
-        <option value="landscape banner, 16:9 ratio">Landscape banner (16:9)</option>
+        <option value="square, 1:1 ratio, sized for an Instagram or Facebook feed post">Instagram / Facebook post (1:1)</option>
+        <option value="portrait, 9:16 ratio, sized for an Instagram or TikTok story or reel">Instagram Story / Reel, TikTok (9:16)</option>
+        <option value="landscape, 1.91:1 ratio, sized for a LinkedIn or X feed post">LinkedIn / X post (1.91:1)</option>
+        <option value="portrait poster, 2:3 ratio, sized for print">Printed poster (2:3)</option>
+        <option value="landscape banner, 16:9 ratio">Widescreen banner (16:9)</option>
       </select>
     </label>
+    <div class="ratio-checker">
+      <div class="ratio-box" id="ratioBox"></div>
+      <span class="ratio-label" id="ratioLabel"></span>
+    </div>
     <label class="field"><span>Anything else worth telling it? (optional)</span><textarea id="fExtra" placeholder="e.g. keep it printable in black and white, must work as a thumbnail"></textarea></label>
   </div>
 
@@ -641,9 +687,74 @@ combos.forEach(combo => {
     document.getElementById('customPalette').classList.remove('active');
     chip.classList.add('selected');
     selectedCombo = combo;
+    if (!combo.workingColors) combo.workingColors = [...combo.colors];
+    renderBgPicker();
   });
   colorGrid.appendChild(chip);
 });
+
+// relative luminance, used only to guess a sensible default background
+// (the lightest colour in the set), never to decide anything final
+function relativeLuminance(hex){
+  const c = hex.replace('#','');
+  const r = parseInt(c.slice(0,2),16)/255, g = parseInt(c.slice(2,4),16)/255, b = parseInt(c.slice(4,6),16)/255;
+  return 0.2126*r + 0.7152*g + 0.0722*b;
+}
+
+// neutrals offered alongside the locked palette, purely as background swaps,
+// never added on top, so the colour cap never actually grows
+const NEUTRAL_BACKGROUNDS = [
+  {name: 'White', hex: '#FFFFFF'},
+  {name: 'Black', hex: '#0B0B0C'},
+  {name: 'Cream', hex: '#F4EEDD'}
+];
+
+function renderBgPicker(){
+  const wrap = document.getElementById('bgPicker');
+  if (!selectedCombo){ wrap.style.display = 'none'; return; }
+  if (!selectedCombo.workingColors) selectedCombo.workingColors = [...selectedCombo.colors];
+  const working = selectedCombo.workingColors;
+
+  if (!selectedCombo.background || !working.includes(selectedCombo.background)){
+    selectedCombo.background = [...working].sort((a,b) => relativeLuminance(b) - relativeLuminance(a))[0];
+  }
+
+  const box = document.getElementById('bgSwatches');
+  box.innerHTML = '';
+  working.forEach(hex => {
+    const sw = document.createElement('div');
+    sw.className = 'bg-swatch' + (hex === selectedCombo.background ? ' selected' : '');
+    sw.style.background = hex;
+    sw.title = hex;
+    sw.addEventListener('click', () => {
+      selectedCombo.background = hex;
+      renderBgPicker();
+    });
+    box.appendChild(sw);
+  });
+
+  const neutralBox = document.getElementById('bgNeutrals');
+  neutralBox.innerHTML = '';
+  NEUTRAL_BACKGROUNDS.forEach(n => {
+    const sw = document.createElement('div');
+    const isActive = n.hex === selectedCombo.background && !selectedCombo.colors.includes(n.hex);
+    sw.className = 'bg-swatch bg-neutral' + (isActive ? ' selected' : '');
+    sw.style.background = n.hex;
+    sw.title = n.name;
+    sw.addEventListener('click', () => {
+      // swap the neutral into whichever slot currently holds the background,
+      // so the working set stays the same length, never grows past the cap
+      const oldBg = selectedCombo.background;
+      const idx = selectedCombo.workingColors.indexOf(oldBg);
+      if (idx > -1) selectedCombo.workingColors[idx] = n.hex;
+      selectedCombo.background = n.hex;
+      renderBgPicker();
+    });
+    neutralBox.appendChild(sw);
+  });
+
+  wrap.style.display = 'block';
+}
 
 // swaps combo labels to cyber-framed names when the security callout type is active,
 // same colours underneath, just a label that fits the content
@@ -762,9 +873,10 @@ document.getElementById('cpUseBtn').addEventListener('click', () => {
   ].filter(Boolean);
   if (hexes.length < 2){ showModal('Enter at least two valid hex colours, or pick a suggestion for colour 2.'); return; }
   const name = document.getElementById('cpName').value.trim() || 'Custom palette';
-  selectedCombo = { name, altName: name, mood: 'your own colours', altMood: 'your own colours', colors: hexes };
+  selectedCombo = { name, altName: name, mood: 'your own colours', altMood: 'your own colours', colors: hexes, workingColors: [...hexes] };
   document.querySelectorAll('.colorchip').forEach(c => c.classList.remove('selected'));
   document.getElementById('customPalette').classList.add('active');
+  renderBgPicker();
 });
 
 document.querySelectorAll('#styleGrid .card').forEach(card => {
@@ -903,6 +1015,25 @@ document.getElementById('posterType').addEventListener('change', () => {
 renderFieldSet();
 refreshComboLabels();
 
+// keeps the little shape preview honest against whatever ratio is picked,
+// fitting it inside a fixed box rather than letting portrait ratios
+// balloon taller than the row or landscape ones go flat and tiny
+function updateRatioPreview(){
+  const aspect = document.getElementById('fAspect').value;
+  const ratio = ratioFromAspect(aspect);
+  const [w, h] = ratio.split(':').map(Number);
+  const maxDim = 64;
+  let boxW, boxH;
+  if (w >= h){ boxW = maxDim; boxH = maxDim * (h / w); }
+  else { boxH = maxDim; boxW = maxDim * (w / h); }
+  const box = document.getElementById('ratioBox');
+  box.style.width = boxW + 'px';
+  box.style.height = boxH + 'px';
+  document.getElementById('ratioLabel').textContent = ratio;
+}
+document.getElementById('fAspect').addEventListener('change', updateRatioPreview);
+updateRatioPreview();
+
 // explain-it mode, just toggles a body class the CSS keys off
 document.getElementById('explainToggle').addEventListener('change', function(){
   document.body.classList.toggle('explain-on', this.checked);
@@ -929,16 +1060,26 @@ function getFactLines(){
 }
 
 function ratioFromAspect(aspect){
-  const m = aspect.match(/(\d+):(\d+)/);
+  const m = aspect.match(/([\d.]+):([\d.]+)/);
   return m ? `${m[1]}:${m[2]}` : '1:1';
 }
 
-function buildProsePrompt(styleObj, comboDisplayName, colourList, factLines, excluded, extra, aspect){
+// only print and both actually need a line, since digital is the assumed
+// default everywhere else in the prompt already
+function getMediumPhrase(medium){
+  if (medium === 'print') return 'This is for print. Keep every colour flat and matte, like ink on paper, not glowing or backlit. Contrast needs to hold at physical poster size, not just on a screen.';
+  if (medium === 'both') return 'This needs to work both in print and on screen. Keep colours flat and matte rather than glowing or backlit, so it holds up in either format.';
+  return '';
+}
+
+function buildProsePrompt(styleObj, comboDisplayName, colourList, bgHex, accentHexes, factLines, excluded, extra, aspect, mediumPhrase){
   const facts = factLines.map(f => `"${f.value}" as the ${f.role}`).join(', ');
+  const accentPhrase = accentHexes.length > 1 ? `${accentHexes.join(', ')} as accents` : `${accentHexes[0]} as the accent`;
   let prompt = `Design a ${aspect} poster.\n\n`;
   prompt += `Style: ${styleObj.directive}\n\n`;
   prompt += `Typography: ${styleObj.type}\n\n`;
-  prompt += `Palette: "${comboDisplayName}", use only these colours, nothing else: ${colourList}.\n\n`;
+  if (mediumPhrase) prompt += `Medium: ${mediumPhrase}\n\n`;
+  prompt += `Palette: "${comboDisplayName}", use only these colours, nothing else: ${colourList}. ${bgHex} as the dominant background, ${accentPhrase}.\n\n`;
   prompt += `Copy: the only text on the poster is ${facts}. Nothing else. Give the first line the most visual weight, everything after it clearly secondary, sized and positioned so all of it reads instantly from a distance.\n\n`;
   prompt += `Composition: strong hierarchy, deliberate negative space, no clutter. Every element on the page should earn its place.\n\n`;
   if (excluded.length) prompt += `Do not include: ${excluded.join(', ')}.\n\n`;
@@ -947,17 +1088,20 @@ function buildProsePrompt(styleObj, comboDisplayName, colourList, factLines, exc
   return prompt;
 }
 
-function buildMidjourneyPrompt(styleObj, comboDisplayName, colourList, factLines, excluded, extra, aspect){
+function buildMidjourneyPrompt(styleObj, comboDisplayName, colourList, bgHex, accentHexes, factLines, excluded, extra, aspect, mediumPhrase){
   const copyTags = factLines.map(f => `"${f.value}"`).join(', ');
   const tags = [
     copyTags,
     styleObj.directive.split(':')[0].toLowerCase(),
     styleObj.type,
     `${comboDisplayName.toLowerCase()} colour palette, only ${colourList}`,
+    `${bgHex} dominant background`,
+    `${accentHexes.join(', ')} as accent only`,
     'strong typographic hierarchy',
     'deliberate negative space',
     'no clutter'
   ];
+  if (mediumPhrase) tags.push(mediumPhrase);
   if (extra) tags.push(extra);
   let out = tags.join(', ');
   if (excluded.length) out += ` --no ${excluded.join(', ')}`;
@@ -965,15 +1109,17 @@ function buildMidjourneyPrompt(styleObj, comboDisplayName, colourList, factLines
   return out;
 }
 
-function buildSDPrompt(styleObj, comboDisplayName, colourList, factLines, excluded, extra, aspect){
+function buildSDPrompt(styleObj, comboDisplayName, colourList, bgHex, accentHexes, factLines, excluded, extra, aspect, mediumPhrase){
   const copyTags = factLines.map(f => `text "${f.value}"`).join(', ');
   const tags = [
     copyTags,
     styleObj.directive.split(':')[0].toLowerCase(),
     styleObj.type,
     `${comboDisplayName.toLowerCase()} palette, only ${colourList}`,
+    `${bgHex} dominant background, ${accentHexes.join(', ')} as accent only`,
     'strong hierarchy', 'negative space', 'no clutter'
   ];
+  if (mediumPhrase) tags.push(mediumPhrase);
   if (extra) tags.push(extra);
   let out = `Prompt: ${tags.join(', ')}\n\n`;
   out += `Negative prompt: ${excluded.join(', ') || 'none specified'}\n\n`;
@@ -986,6 +1132,7 @@ function generatePrompt(){
   const set = fieldSets[type];
   const aspect = document.getElementById('fAspect').value;
   const target = document.getElementById('fTarget').value;
+  const medium = document.getElementById('fMedium').value;
   const extra = document.getElementById('fExtra').value.trim();
 
   if (!selectedStyle) { showModal('Pick a design style first.'); return false; }
@@ -1002,14 +1149,18 @@ function generatePrompt(){
 
   const factLines = getFactLines();
   const styleObj = styles[selectedStyle];
-  const colourList = selectedCombo.colors.join(', ');
+  const workingColors = selectedCombo.workingColors || selectedCombo.colors;
+  const colourList = workingColors.join(', ');
   const comboDisplayName = securityFamily.includes(type) ? selectedCombo.altName : selectedCombo.name;
   const excluded = Array.from(document.querySelectorAll('#checklist input:checked')).map(i => i.value);
+  const bgHex = selectedCombo.background || workingColors[0];
+  const accentHexes = workingColors.filter(c => c !== bgHex);
+  const mediumPhrase = getMediumPhrase(medium);
 
   let prompt;
-  if (target === 'midjourney') prompt = buildMidjourneyPrompt(styleObj, comboDisplayName, colourList, factLines, excluded, extra, aspect);
-  else if (target === 'sd') prompt = buildSDPrompt(styleObj, comboDisplayName, colourList, factLines, excluded, extra, aspect);
-  else prompt = buildProsePrompt(styleObj, comboDisplayName, colourList, factLines, excluded, extra, aspect);
+  if (target === 'midjourney') prompt = buildMidjourneyPrompt(styleObj, comboDisplayName, colourList, bgHex, accentHexes, factLines, excluded, extra, aspect, mediumPhrase);
+  else if (target === 'sd') prompt = buildSDPrompt(styleObj, comboDisplayName, colourList, bgHex, accentHexes, factLines, excluded, extra, aspect, mediumPhrase);
+  else prompt = buildProsePrompt(styleObj, comboDisplayName, colourList, bgHex, accentHexes, factLines, excluded, extra, aspect, mediumPhrase);
 
   document.getElementById('receiptText').textContent = prompt;
   document.getElementById('outputSection').style.display = 'block';
@@ -1048,6 +1199,8 @@ function getShareState(){
     style: selectedStyle,
     combo: comboIndex,
     customCombo: comboIndex === -1 && selectedCombo ? selectedCombo : null,
+    background: selectedCombo ? selectedCombo.background : null,
+    workingColors: selectedCombo ? selectedCombo.workingColors : null,
     type: type,
     fields: fields,
     fourthOn: document.getElementById('fourthToggle').checked,
@@ -1055,6 +1208,7 @@ function getShareState(){
     excluded: Array.from(document.querySelectorAll('#checklist input')).map(i => i.checked),
     aspect: document.getElementById('fAspect').value,
     target: document.getElementById('fTarget').value,
+    medium: document.getElementById('fMedium').value,
     extra: document.getElementById('fExtra').value
   };
 }
@@ -1082,6 +1236,14 @@ function applyShareState(state){
     colorGrid.children[state.combo].click();
   }
 
+  if (state.workingColors && selectedCombo){
+    selectedCombo.workingColors = state.workingColors;
+  }
+  if (state.background && selectedCombo){
+    selectedCombo.background = state.background;
+  }
+  renderBgPicker();
+
   if (state.fields){
     if (state.fields.typed){
       const inputs = document.querySelectorAll('.typedField');
@@ -1107,7 +1269,9 @@ function applyShareState(state){
   }
 
   if (state.aspect) document.getElementById('fAspect').value = state.aspect;
+  updateRatioPreview();
   if (state.target) document.getElementById('fTarget').value = state.target;
+  if (state.medium) document.getElementById('fMedium').value = state.medium;
   if (state.extra) document.getElementById('fExtra').value = state.extra;
 }
 
