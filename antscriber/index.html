@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.4.2</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.4.3</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -508,7 +508,7 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
 
   return new Promise(async (resolve, reject) => {
     const mp4boxFile = MP4Box.createFile();
-    const CHUNK_SIZE = 4 * 1024 * 1024; // 4MB read chunks
+    const CHUNK_SIZE = 16 * 1024 * 1024; // 16MB read chunks
     const fileSize = file.size;
     let fileOffset = 0;
     let audioTrackId = null;
@@ -660,26 +660,37 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
     mp4boxFile.onError = (e) => reject(new Error('MP4 parse error: ' + e));
 
     // Stream file in chunks
+    // Use larger initial chunk to help MP4Box find moov atom even if it's at end of file
     async function feedFile() {
+      // First pass: feed entire file so MP4Box can locate moov atom regardless of position
+      // We do this in chunks to avoid memory pressure, yielding between each
       while (fileOffset < fileSize) {
         const end = Math.min(fileOffset + CHUNK_SIZE, fileSize);
-        const slice = await file.slice(fileOffset, end).arrayBuffer();
-        const buf = slice;
+        const slice = file.slice(fileOffset, end);
+        const buf = await slice.arrayBuffer();
         buf.fileStart = fileOffset;
         fileOffset = end;
-        mp4boxFile.appendBuffer(buf);
-        onProgress(Math.min(99, (fileOffset / fileSize) * 100), timeOffset + pcmSamples / nativeRate);
-        // Yield to let decoder callbacks run
+        const nextOffset = mp4boxFile.appendBuffer(buf);
+        // mp4box may request a seek — honour it
+        if (nextOffset !== undefined && nextOffset !== fileOffset) {
+          console.log('[Antscriber] MP4Box seeking to:', nextOffset);
+          fileOffset = nextOffset;
+        }
+        onProgress(Math.min(95, (fileOffset / fileSize) * 100), timeOffset + pcmSamples / nativeRate);
+        // Yield between chunks so decoder callbacks and Whisper can run
         await new Promise(r => setTimeout(r, 0));
       }
       mp4boxFile.flush();
-      // Wait for decoder to drain
-      if (audioDecoder && audioDecoder.decodeQueueSize > 0) {
-        await audioDecoder.flush();
-      } else if (audioDecoder) {
+
+      // Drain the audio decoder
+      if (audioDecoder && audioDecoder.state !== 'closed') {
         await audioDecoder.flush();
       }
-      // Flush remaining PCM to Whisper
+
+      // Small delay to let final output callbacks fire
+      await new Promise(r => setTimeout(r, 200));
+
+      // Flush any remaining PCM to Whisper
       await flushIfReady(true);
       resolve();
     }
