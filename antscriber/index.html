@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.6.2</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.6.3</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -578,43 +578,67 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
         source = audioCtx.createMediaElementSource(video);
         processor = audioCtx.createScriptProcessor(4096, 1, 1);
 
-        let flushing = false;
-        let pendingFlush = false;
-
+        // Phase 1: capture ALL audio — no Whisper calls during capture
+        // onaudioprocess must return instantly or Chrome drops callbacks
         processor.onaudioprocess = (e) => {
-          const data = new Float32Array(e.inputBuffer.getChannelData(0));
+          const data = e.inputBuffer.getChannelData(0);
           if (firstFrame) {
             const peak = data.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
-            console.log('[Antscriber] First frame peak:', peak.toFixed(4), 'rate:', audioCtx.sampleRate, 'frames:', data.length);
+            console.log('[Antscriber] First frame peak:', peak.toFixed(4), 'rate:', audioCtx.sampleRate);
             firstFrame = false;
           }
-          pcmBuffer.push(data);
+          pcmBuffer.push(new Float32Array(data)); // copy — buffer is reused
           pcmBuffered += data.length;
-          onProgress(Math.min(95, (video.currentTime / duration) * 95), video.currentTime);
-
-          // Kick off a flush if not already running
-          if (!flushing && pcmBuffered >= WINDOW_SAMPLES) {
-            flushing = true;
-            flushWindow(false).then(() => { flushing = false; });
-          }
+          onProgress(Math.min(50, (video.currentTime / duration) * 50), video.currentTime);
         };
 
-        // Use a GainNode at 0 to silence output without killing audio decoding
-        // Setting video.volume=0 causes Chrome to skip decoding entirely
         const silencer = audioCtx.createGain();
         silencer.gain.value = 0;
         source.connect(processor);
         processor.connect(silencer);
         silencer.connect(audioCtx.destination);
 
-        video.addEventListener('ended', () => {
-          // Pause briefly to let the last onaudioprocess fire, then do final flush
-          setTimeout(async () => {
-            console.log('[Antscriber] Video ended. Buffered samples:', pcmBuffered, 'Time offset:', timeOffset.toFixed(1));
-            await flushWindow(true);
-            cleanup();
-            resolve();
-          }, 500);
+        video.addEventListener('ended', async () => {
+          await new Promise(r => setTimeout(r, 300));
+          console.log('[Antscriber] Captured:', pcmBuffered, 'samples =', (pcmBuffered/CAPTURE_RATE).toFixed(1), 's');
+
+          // Phase 2: transcribe full buffer in 30s windows
+          setStatus('Transcribing...', 'active', 52);
+          const totalSamples = pcmBuffered;
+          let transcribed = 0;
+
+          while (pcmBuffered > 0) {
+            const take = Math.min(WINDOW_SAMPLES, pcmBuffered);
+            const flat = new Float32Array(take);
+            let pos = 0;
+            while (pos < take && pcmBuffer.length) {
+              const c = pcmBuffer[0], need = take - pos;
+              if (c.length <= need) {
+                flat.set(c, pos); pos += c.length; pcmBuffer.shift(); pcmBuffered -= c.length;
+              } else {
+                flat.set(c.subarray(0, need), pos); pcmBuffer[0] = c.subarray(need); pcmBuffered -= need; pos += need;
+              }
+            }
+            const chunkOffset = timeOffset;
+            timeOffset += take / CAPTURE_RATE;
+            transcribed += take;
+
+            try {
+              const result = await transcriber(flat, { return_timestamps: true, language: lang });
+              const segs = result.chunks || [{ timestamp: [0, null], text: result.text }];
+              segs.forEach(seg => {
+                const t = seg.text.trim(); if (!t) return;
+                const s = (seg.timestamp?.[0] ?? 0) + chunkOffset;
+                const e = seg.timestamp?.[1] != null ? seg.timestamp[1] + chunkOffset : null;
+                appendSegment(s, e, t);
+              });
+            } catch(e) { console.error('[Antscriber] Whisper error:', e); }
+
+            onProgress(50 + Math.round((transcribed / totalSamples) * 48), timeOffset);
+          }
+
+          cleanup();
+          resolve();
         });
 
         // Play at 2x — fast enough to matter, slow enough not to drop samples
