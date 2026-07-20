@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.5.7</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.6.1</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -501,105 +501,127 @@ function appendSegment(startSec, endSec, text) {
   if (outputWrap.style.display === 'none') outputWrap.style.display = 'block';
 }
 
-// Resample f32 PCM from any rate to 16kHz using browser native OfflineAudioContext
-async function resampleTo16k(f32, rate) {
-  if (rate === WHISPER_RATE) return f32;
-  const frames = Math.ceil(f32.length * WHISPER_RATE / rate);
-  const ctx = new OfflineAudioContext(1, frames, WHISPER_RATE);
-  const buf = ctx.createBuffer(1, f32.length, rate);
-  buf.copyToChannel(f32, 0);
-  const src = ctx.createBufferSource();
-  src.buffer = buf; src.connect(ctx.destination); src.start(0);
-  const out = await ctx.startRendering();
-  return out.getChannelData(0);
-}
-
-// Audio extraction via @webav/av-cliper + WebCodecs
-// Ticks through the clip 100ms at a time — never loads the full file into memory
-// Transcribes each 30s window as it accumulates rather than waiting for full extraction
+// Audio extraction via video element + AudioContext
+// Plays the file through a hidden video at 1x speed, captures PCM via ScriptProcessor
+// Works with any format Chrome can play — no external dependencies
 async function extractAndTranscribe(file, transcriber, lang, onProgress) {
-  const { MP4Clip } = await import('https://esm.sh/@webav/av-cliper@1.2.7');
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.src = url;
+    video.volume = 0;
+    video.preload = 'metadata';
+    video.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px;';
+    document.body.appendChild(video);
 
-  setStatus('Opening video...', 'active', 5);
-  const clip = new MP4Clip(file.stream(), { audio: true });
-  await clip.ready;
+    const CAPTURE_RATE = 16000;
+    const WINDOW_SECONDS = 30;
+    const WINDOW_SAMPLES = CAPTURE_RATE * WINDOW_SECONDS;
 
-  const { duration } = clip.meta;
-  const durationSecs = duration / 1e6;
-  console.log('[Antscriber] Duration:', durationSecs.toFixed(1), 's');
+    let audioCtx, source, processor;
+    let pcmBuffer = [];
+    let pcmBuffered = 0;
+    let timeOffset = 0;
+    let duration = 0;
+    let firstFrame = true;
 
-  let nativeRate = 48000;
-  let pcmBuffer = [];       // chunks waiting to be transcribed
-  let pcmBuffered = 0;      // total samples in buffer
-  let timeOffset = 0;       // seconds already sent to Whisper
-  let firstFrame = true;
-  const TICK_US = 100000;   // 100ms per tick
-  const windowNative = () => WINDOW_SECONDS * nativeRate;
+    function cleanup() {
+      try { processor && processor.disconnect(); } catch(e) {}
+      try { source && source.disconnect(); } catch(e) {}
+      try { audioCtx && audioCtx.close(); } catch(e) {}
+      URL.revokeObjectURL(url);
+      if (video.parentNode) video.parentNode.removeChild(video);
+    }
 
-  async function flushBuffer(force = false) {
-    while (pcmBuffered >= windowNative() || (force && pcmBuffered > 0)) {
-      const take = force ? pcmBuffered : windowNative();
-      const flat = new Float32Array(take);
-      let pos = 0;
-      while (pos < take && pcmBuffer.length) {
-        const c = pcmBuffer[0], need = take - pos;
-        if (c.length <= need) { flat.set(c, pos); pos += c.length; pcmBuffer.shift(); pcmBuffered -= c.length; }
-        else { flat.set(c.subarray(0, need), pos); pcmBuffer[0] = c.subarray(need); pcmBuffered -= need; pos += need; }
+    async function flushWindow(force = false) {
+      while (pcmBuffered >= WINDOW_SAMPLES || (force && pcmBuffered > 0)) {
+        const take = force ? pcmBuffered : WINDOW_SAMPLES;
+        const flat = new Float32Array(take);
+        let pos = 0;
+        while (pos < take && pcmBuffer.length) {
+          const c = pcmBuffer[0], need = take - pos;
+          if (c.length <= need) {
+            flat.set(c, pos); pos += c.length;
+            pcmBuffer.shift(); pcmBuffered -= c.length;
+          } else {
+            flat.set(c.subarray(0, need), pos);
+            pcmBuffer[0] = c.subarray(need);
+            pcmBuffered -= need; pos += need;
+          }
+        }
+        const chunkOffset = timeOffset;
+        timeOffset += take / CAPTURE_RATE;
+        try {
+          const result = await transcriber(flat, { return_timestamps: true, language: lang });
+          const segs = result.chunks || [{ timestamp: [0, null], text: result.text }];
+          segs.forEach(seg => {
+            const t = seg.text.trim(); if (!t) return;
+            const s = (seg.timestamp?.[0] ?? 0) + chunkOffset;
+            const e = seg.timestamp?.[1] != null ? seg.timestamp[1] + chunkOffset : null;
+            appendSegment(s, e, t);
+          });
+        } catch(e) { console.error('[Antscriber] Whisper error:', e); }
+        if (force) break;
       }
-      const chunkOffset = timeOffset;
-      timeOffset += take / nativeRate;
-      const resampled = await resampleTo16k(flat, nativeRate);
+    }
+
+    video.addEventListener('error', () => { cleanup(); reject(new Error('Could not read video file.')); });
+
+    video.addEventListener('loadedmetadata', async () => {
+      duration = video.duration;
+      if (!duration || !isFinite(duration)) {
+        cleanup(); reject(new Error('Could not read video duration.')); return;
+      }
+
       try {
-        const result = await transcriber(resampled, { return_timestamps: true, language: lang });
-        const segs = result.chunks || [{ timestamp: [0, null], text: result.text }];
-        segs.forEach(seg => {
-          const t = seg.text.trim(); if (!t) return;
-          const s = (seg.timestamp?.[0] ?? 0) + chunkOffset;
-          const e = seg.timestamp?.[1] != null ? seg.timestamp[1] + chunkOffset : null;
-          appendSegment(s, e, t);
+        // AudioContext at 16kHz — browser downmixes to this rate natively
+        audioCtx = new AudioContext({ sampleRate: CAPTURE_RATE });
+        source = audioCtx.createMediaElementSource(video);
+        processor = audioCtx.createScriptProcessor(4096, 1, 1);
+
+        let flushing = false;
+        let pendingFlush = false;
+
+        processor.onaudioprocess = (e) => {
+          const data = new Float32Array(e.inputBuffer.getChannelData(0));
+          if (firstFrame) {
+            const peak = data.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+            console.log('[Antscriber] First frame peak:', peak.toFixed(4), 'rate:', audioCtx.sampleRate, 'frames:', data.length);
+            firstFrame = false;
+          }
+          pcmBuffer.push(data);
+          pcmBuffered += data.length;
+          onProgress(Math.min(95, (video.currentTime / duration) * 95), video.currentTime);
+
+          // Kick off a flush if not already running
+          if (!flushing && pcmBuffered >= WINDOW_SAMPLES) {
+            flushing = true;
+            flushWindow(false).then(() => { flushing = false; });
+          }
+        };
+
+        source.connect(processor);
+        processor.connect(audioCtx.destination);
+
+        video.addEventListener('ended', () => {
+          // Pause briefly to let the last onaudioprocess fire, then do final flush
+          setTimeout(async () => {
+            console.log('[Antscriber] Video ended. Buffered samples:', pcmBuffered, 'Time offset:', timeOffset.toFixed(1));
+            await flushWindow(true);
+            cleanup();
+            resolve();
+          }, 500);
         });
-      } catch(e) { console.error('[Antscriber] Whisper error:', e); }
-      if (force) break;
-    }
-  }
 
-  let currentTime = 0;
-  setStatus('Extracting & transcribing...', 'active', 10);
+        // Play at 2x — fast enough to matter, slow enough not to drop samples
+        video.playbackRate = 2;
+        await video.play();
 
-  while (currentTime < duration) {
-    const { audio, state } = await clip.tick(currentTime);
-    if (state === 'done') break;
-
-    // audio is a single AudioData object per tick
-    if (audio && audio.numberOfFrames > 0) {
-      nativeRate = audio.sampleRate;
-      const frames = audio.numberOfFrames;
-      const ch = audio.numberOfChannels;
-      const mono = new Float32Array(frames);
-      for (let c = 0; c < ch; c++) {
-        const buf = new Float32Array(frames);
-        audio.copyTo(buf, { planeIndex: c, format: 'f32-planar' });
-        for (let i = 0; i < frames; i++) mono[i] += buf[i] / ch;
-      }
-      if (typeof audio.close === 'function') audio.close();
-      if (firstFrame) {
-        const peak = mono.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
-        console.log('[Antscriber] First frame — rate:', nativeRate, 'ch:', ch, 'frames:', frames, 'peak:', peak.toFixed(4));
-        firstFrame = false;
-      }
-      pcmBuffer.push(mono);
-      pcmBuffered += mono.length;
-      await flushBuffer(false);
-    }
-
-    currentTime += TICK_US;
-    const pct = 10 + Math.round((currentTime / duration) * 85);
-    onProgress(Math.min(95, pct), timeOffset);
-  }
-
-  clip.destroy();
-  await flushBuffer(true);
+      } catch(err) { cleanup(); reject(err); }
+    });
+  });
 }
+
 
 async function handleFile(file) {
   dropZone.classList.add('has-file');
