@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.6.1</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.6.2</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -509,7 +509,6 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
     const url = URL.createObjectURL(file);
     const video = document.createElement('video');
     video.src = url;
-    video.volume = 0;
     video.preload = 'metadata';
     video.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px;';
     document.body.appendChild(video);
@@ -600,8 +599,13 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
           }
         };
 
+        // Use a GainNode at 0 to silence output without killing audio decoding
+        // Setting video.volume=0 causes Chrome to skip decoding entirely
+        const silencer = audioCtx.createGain();
+        silencer.gain.value = 0;
         source.connect(processor);
-        processor.connect(audioCtx.destination);
+        processor.connect(silencer);
+        silencer.connect(audioCtx.destination);
 
         video.addEventListener('ended', () => {
           // Pause briefly to let the last onaudioprocess fire, then do final flush
