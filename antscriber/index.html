@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.5.5</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.5.7</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -521,7 +521,7 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
   const { MP4Clip } = await import('https://esm.sh/@webav/av-cliper@1.2.7');
 
   setStatus('Opening video...', 'active', 5);
-  const clip = new MP4Clip(file.stream());
+  const clip = new MP4Clip(file.stream(), { audio: true });
   await clip.ready;
 
   const { duration } = clip.meta;
@@ -570,26 +570,25 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
     const { audio, state } = await clip.tick(currentTime);
     if (state === 'done') break;
 
-    if (audio && audio.length > 0) {
-      for (const audioData of audio) {
-        nativeRate = audioData.sampleRate;
-        const frames = audioData.numberOfFrames;
-        const ch = audioData.numberOfChannels;
-        const mono = new Float32Array(frames);
-        for (let c = 0; c < ch; c++) {
-          const buf = new Float32Array(frames);
-          audioData.copyTo(buf, { planeIndex: c, format: 'f32-planar' });
-          for (let i = 0; i < frames; i++) mono[i] += buf[i] / ch;
-        }
-        audioData.close();
-        if (firstFrame) {
-          const peak = mono.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
-          console.log('[Antscriber] First frame — rate:', nativeRate, 'peak:', peak.toFixed(4));
-          firstFrame = false;
-        }
-        pcmBuffer.push(mono);
-        pcmBuffered += mono.length;
+    // audio is a single AudioData object per tick
+    if (audio && audio.numberOfFrames > 0) {
+      nativeRate = audio.sampleRate;
+      const frames = audio.numberOfFrames;
+      const ch = audio.numberOfChannels;
+      const mono = new Float32Array(frames);
+      for (let c = 0; c < ch; c++) {
+        const buf = new Float32Array(frames);
+        audio.copyTo(buf, { planeIndex: c, format: 'f32-planar' });
+        for (let i = 0; i < frames; i++) mono[i] += buf[i] / ch;
       }
+      if (typeof audio.close === 'function') audio.close();
+      if (firstFrame) {
+        const peak = mono.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+        console.log('[Antscriber] First frame — rate:', nativeRate, 'ch:', ch, 'frames:', frames, 'peak:', peak.toFixed(4));
+        firstFrame = false;
+      }
+      pcmBuffer.push(mono);
+      pcmBuffered += mono.length;
       await flushBuffer(false);
     }
 
