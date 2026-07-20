@@ -383,7 +383,7 @@
     <div id="output-wrap">
       <div class="output-header">
         <span class="output-label">Transcript</span>
-        <button class="copy-btn" id="copy-btn">
+        <button class="copy-btn" id="copy-btn" onclick="copyTranscript()">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
           </svg>
@@ -395,13 +395,13 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.5.1</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.5.2</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
 
-<script type="module">
-import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
+<script>
+let pipeline, env;
 
 const MODELS = ['tiny', 'base', 'small', 'medium'];
 const MODEL_LABELS = ['Tiny (fastest)', 'Base', 'Small', 'Medium (most accurate)'];
@@ -463,9 +463,13 @@ async function boot() {
   loadScreen.classList.add('fade-out');
   setTimeout(() => { loadScreen.style.display = 'none'; app.classList.add('visible'); }, 500);
 }
-boot();
+(async () => {
+  const mod = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');
+  pipeline = mod.pipeline;
+  env = mod.env;
+  boot();
+})();
 
-document.getElementById('copy-btn').addEventListener('click', () => copyTranscript());
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
@@ -605,18 +609,7 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
   }
 }
 
-window.copyTranscript = copyTranscript;
 
-// Register service worker for COOP/COEP headers (required for ffmpeg.wasm SharedArrayBuffer)
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').then(reg => {
-    if (reg.installing) {
-      reg.installing.addEventListener('statechange', (e) => {
-        if (e.target.state === 'activated') window.location.reload();
-      });
-    }
-  }).catch(e => console.warn('[Antscriber] SW registration failed:', e));
-}
 </script>
 </body>
 </html>
