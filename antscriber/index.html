@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.5.4</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.5.5</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -518,7 +518,7 @@ async function resampleTo16k(f32, rate) {
 // Ticks through the clip 100ms at a time — never loads the full file into memory
 // Transcribes each 30s window as it accumulates rather than waiting for full extraction
 async function extractAndTranscribe(file, transcriber, lang, onProgress) {
-  const { MP4Clip } = await import('https://cdn.jsdelivr.net/npm/@webav/av-cliper@0.14.3/dist/index.js');
+  const { MP4Clip } = await import('https://esm.sh/@webav/av-cliper@1.2.7');
 
   setStatus('Opening video...', 'active', 5);
   const clip = new MP4Clip(file.stream());
