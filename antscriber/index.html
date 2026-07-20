@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.6.5</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.7.0</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -501,9 +501,9 @@ function appendSegment(startSec, endSec, text) {
   if (outputWrap.style.display === 'none') outputWrap.style.display = 'block';
 }
 
-// Audio extraction via video element + AudioContext
-// Plays the file through a hidden video at 1x speed, captures PCM via ScriptProcessor
-// Works with any format Chrome can play — no external dependencies
+// Audio extraction via video element + AudioWorklet
+// AudioWorklet runs on a dedicated audio thread — cannot be interrupted by JS
+// so no dropped samples regardless of what the main thread is doing
 async function extractAndTranscribe(file, transcriber, lang, onProgress) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -517,54 +517,27 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
     const WINDOW_SECONDS = 30;
     const WINDOW_SAMPLES = CAPTURE_RATE * WINDOW_SECONDS;
 
-    let audioCtx, source, processor;
+    let audioCtx, source, workletNode;
     let pcmBuffer = [];
     let pcmBuffered = 0;
     let timeOffset = 0;
     let duration = 0;
     let firstFrame = true;
+    let frameCount = 0;
 
     function cleanup() {
-      try { processor && processor.disconnect(); } catch(e) {}
+      try { workletNode && workletNode.port.postMessage('stop'); } catch(e) {}
+      try { workletNode && workletNode.disconnect(); } catch(e) {}
       try { source && source.disconnect(); } catch(e) {}
       try { audioCtx && audioCtx.close(); } catch(e) {}
       URL.revokeObjectURL(url);
       if (video.parentNode) video.parentNode.removeChild(video);
     }
 
-    async function flushWindow(force = false) {
-      while (pcmBuffered >= WINDOW_SAMPLES || (force && pcmBuffered > 0)) {
-        const take = force ? pcmBuffered : WINDOW_SAMPLES;
-        const flat = new Float32Array(take);
-        let pos = 0;
-        while (pos < take && pcmBuffer.length) {
-          const c = pcmBuffer[0], need = take - pos;
-          if (c.length <= need) {
-            flat.set(c, pos); pos += c.length;
-            pcmBuffer.shift(); pcmBuffered -= c.length;
-          } else {
-            flat.set(c.subarray(0, need), pos);
-            pcmBuffer[0] = c.subarray(need);
-            pcmBuffered -= need; pos += need;
-          }
-        }
-        const chunkOffset = timeOffset;
-        timeOffset += take / CAPTURE_RATE;
-        try {
-          const result = await transcriber(flat, { return_timestamps: true, language: lang });
-          const segs = result.chunks || [{ timestamp: [0, null], text: result.text }];
-          segs.forEach(seg => {
-            const t = seg.text.trim(); if (!t) return;
-            const s = (seg.timestamp?.[0] ?? 0) + chunkOffset;
-            const e = seg.timestamp?.[1] != null ? seg.timestamp[1] + chunkOffset : null;
-            appendSegment(s, e, t);
-          });
-        } catch(e) { console.error('[Antscriber] Whisper error:', e); }
-        if (force) break;
-      }
-    }
-
-    video.addEventListener('error', () => { cleanup(); reject(new Error('Could not read video file.')); });
+    video.addEventListener('error', () => {
+      cleanup();
+      reject(new Error('Could not read video file.'));
+    });
 
     video.addEventListener('loadedmetadata', async () => {
       duration = video.duration;
@@ -573,44 +546,43 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
       }
 
       try {
-        // AudioContext at 16kHz — browser downmixes to this rate natively
         audioCtx = new AudioContext({ sampleRate: CAPTURE_RATE });
-        source = audioCtx.createMediaElementSource(video);
-        processor = audioCtx.createScriptProcessor(4096, 1, 1);
 
-        // Phase 1: capture ALL audio — no Whisper calls during capture
-        // onaudioprocess must return instantly or Chrome drops callbacks
-        processor.onaudioprocess = (e) => {
-          const data = e.inputBuffer.getChannelData(0);
+        // Load worklet from same directory as index.html
+        await audioCtx.audioWorklet.addModule('./recorder-worklet.js');
+
+        source = audioCtx.createMediaElementSource(video);
+        workletNode = new AudioWorkletNode(audioCtx, 'recorder-processor');
+
+        // Worklet posts PCM frames to main thread via message port
+        workletNode.port.onmessage = (e) => {
+          const data = e.data;
           if (firstFrame) {
             const peak = data.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
             console.log('[Antscriber] First frame peak:', peak.toFixed(4), 'rate:', audioCtx.sampleRate);
             firstFrame = false;
           }
-          pcmBuffer.push(new Float32Array(data)); // copy — buffer is reused
+          frameCount++;
+          pcmBuffer.push(data);
           pcmBuffered += data.length;
           onProgress(Math.min(50, (video.currentTime / duration) * 50), video.currentTime);
         };
 
+        // Silence the output — gain node prevents audio playing through speakers
         const silencer = audioCtx.createGain();
         silencer.gain.value = 0;
-        source.connect(processor);
-        processor.connect(silencer);
+        source.connect(workletNode);
+        workletNode.connect(silencer);
         silencer.connect(audioCtx.destination);
 
-        // Keep AudioContext alive — Chrome suspends it after ~100s without a running node
-        const keepAlive = audioCtx.createOscillator();
-        const keepAliveGain = audioCtx.createGain();
-        keepAliveGain.gain.value = 0;
-        keepAlive.connect(keepAliveGain);
-        keepAliveGain.connect(audioCtx.destination);
-        keepAlive.start();
-
         video.addEventListener('ended', async () => {
-          await new Promise(r => setTimeout(r, 300));
-          console.log('[Antscriber] Captured:', pcmBuffered, 'samples =', (pcmBuffered/CAPTURE_RATE).toFixed(1), 's');
+          // Wait for last worklet messages to arrive
+          await new Promise(r => setTimeout(r, 500));
+          workletNode.port.postMessage('stop');
 
-          // Phase 2: transcribe full buffer in 30s windows
+          console.log('[Antscriber] Captured:', pcmBuffered, 'samples =', (pcmBuffered / CAPTURE_RATE).toFixed(1), 's from', frameCount, 'frames');
+
+          // Phase 2: transcribe in 30s windows
           setStatus('Transcribing...', 'active', 52);
           const totalSamples = pcmBuffered;
           let transcribed = 0;
@@ -632,7 +604,6 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
             transcribed += take;
 
             try {
-              // Timeout after 60s — silent/corrupt windows can hang Whisper indefinitely
               const result = await Promise.race([
                 transcriber(flat, { return_timestamps: true, language: lang }),
                 new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 60000))
@@ -640,11 +611,11 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
               const segs = result.chunks || [{ timestamp: [0, null], text: result.text }];
               segs.forEach(seg => {
                 const t = seg.text.trim(); if (!t) return;
-                // Skip pure hallucination windows
+                // Skip hallucination windows (10+ words, 2 or fewer unique)
                 const words = t.split(' ');
-                const uniqueWords = new Set(words.map(w => w.toLowerCase().replace(/[^a-z]/g,'')));
-                if (words.length > 10 && uniqueWords.size <= 2) {
-                  console.log('[Antscriber] Skipping hallucination window:', t.slice(0, 40));
+                const unique = new Set(words.map(w => w.toLowerCase().replace(/[^a-z]/g, '')));
+                if (words.length > 10 && unique.size <= 2) {
+                  console.log('[Antscriber] Skipping hallucination:', t.slice(0, 40));
                   return;
                 }
                 const s = (seg.timestamp?.[0] ?? 0) + chunkOffset;
@@ -666,7 +637,6 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
           resolve();
         });
 
-        // Play at 2x — fast enough to matter, slow enough not to drop samples
         video.playbackRate = 1;
         await video.play();
 
