@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.5.2</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.5.4</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -497,34 +497,74 @@ function appendSegment(startSec, endSec, text) {
   outputArea.appendChild(div);
   outputArea.scrollTop = outputArea.scrollHeight;
   transcriptText += `[${label}] ${text}\n`;
+  // Show output area on first segment
+  if (outputWrap.style.display === 'none') outputWrap.style.display = 'block';
 }
 
-// Audio extraction using @webav/av-cliper
-// Handles non-standard MP4s (including DJI), streams via WebCodecs, no worker needed
+// Resample f32 PCM from any rate to 16kHz using browser native OfflineAudioContext
+async function resampleTo16k(f32, rate) {
+  if (rate === WHISPER_RATE) return f32;
+  const frames = Math.ceil(f32.length * WHISPER_RATE / rate);
+  const ctx = new OfflineAudioContext(1, frames, WHISPER_RATE);
+  const buf = ctx.createBuffer(1, f32.length, rate);
+  buf.copyToChannel(f32, 0);
+  const src = ctx.createBufferSource();
+  src.buffer = buf; src.connect(ctx.destination); src.start(0);
+  const out = await ctx.startRendering();
+  return out.getChannelData(0);
+}
+
+// Audio extraction via @webav/av-cliper + WebCodecs
+// Ticks through the clip 100ms at a time — never loads the full file into memory
+// Transcribes each 30s window as it accumulates rather than waiting for full extraction
 async function extractAndTranscribe(file, transcriber, lang, onProgress) {
   const { MP4Clip } = await import('https://cdn.jsdelivr.net/npm/@webav/av-cliper@0.14.3/dist/index.js');
 
   setStatus('Opening video...', 'active', 5);
-
   const clip = new MP4Clip(file.stream());
   await clip.ready;
 
-  const { duration } = await clip.meta;
-  const durationSecs = duration / 1e6; // microseconds to seconds
+  const { duration } = clip.meta;
+  const durationSecs = duration / 1e6;
   console.log('[Antscriber] Duration:', durationSecs.toFixed(1), 's');
 
-  setStatus('Extracting audio...', 'active', 10);
-
-  // Collect all PCM samples at native rate
-  let pcmChunks = [];
-  let pcmSamples = 0;
   let nativeRate = 48000;
-  let samplesProcessed = 0;
+  let pcmBuffer = [];       // chunks waiting to be transcribed
+  let pcmBuffered = 0;      // total samples in buffer
+  let timeOffset = 0;       // seconds already sent to Whisper
+  let firstFrame = true;
+  const TICK_US = 100000;   // 100ms per tick
+  const windowNative = () => WINDOW_SECONDS * nativeRate;
 
-  // av-cliper gives us decoded VideoFrame/AudioData via tick()
-  // We tick through the entire clip collecting audio
-  const TICK_US = 100000; // 100ms ticks
+  async function flushBuffer(force = false) {
+    while (pcmBuffered >= windowNative() || (force && pcmBuffered > 0)) {
+      const take = force ? pcmBuffered : windowNative();
+      const flat = new Float32Array(take);
+      let pos = 0;
+      while (pos < take && pcmBuffer.length) {
+        const c = pcmBuffer[0], need = take - pos;
+        if (c.length <= need) { flat.set(c, pos); pos += c.length; pcmBuffer.shift(); pcmBuffered -= c.length; }
+        else { flat.set(c.subarray(0, need), pos); pcmBuffer[0] = c.subarray(need); pcmBuffered -= need; pos += need; }
+      }
+      const chunkOffset = timeOffset;
+      timeOffset += take / nativeRate;
+      const resampled = await resampleTo16k(flat, nativeRate);
+      try {
+        const result = await transcriber(resampled, { return_timestamps: true, language: lang });
+        const segs = result.chunks || [{ timestamp: [0, null], text: result.text }];
+        segs.forEach(seg => {
+          const t = seg.text.trim(); if (!t) return;
+          const s = (seg.timestamp?.[0] ?? 0) + chunkOffset;
+          const e = seg.timestamp?.[1] != null ? seg.timestamp[1] + chunkOffset : null;
+          appendSegment(s, e, t);
+        });
+      } catch(e) { console.error('[Antscriber] Whisper error:', e); }
+      if (force) break;
+    }
+  }
+
   let currentTime = 0;
+  setStatus('Extracting & transcribing...', 'active', 10);
 
   while (currentTime < duration) {
     const { audio, state } = await clip.tick(currentTime);
@@ -542,71 +582,91 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
           for (let i = 0; i < frames; i++) mono[i] += buf[i] / ch;
         }
         audioData.close();
-        pcmChunks.push(mono);
-        pcmSamples += mono.length;
-        samplesProcessed += mono.length;
+        if (firstFrame) {
+          const peak = mono.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+          console.log('[Antscriber] First frame — rate:', nativeRate, 'peak:', peak.toFixed(4));
+          firstFrame = false;
+        }
+        pcmBuffer.push(mono);
+        pcmBuffered += mono.length;
       }
+      await flushBuffer(false);
     }
 
     currentTime += TICK_US;
-    onProgress(Math.min(80, (currentTime / duration) * 80), currentTime / 1e6);
+    const pct = 10 + Math.round((currentTime / duration) * 85);
+    onProgress(Math.min(95, pct), timeOffset);
   }
 
   clip.destroy();
+  await flushBuffer(true);
+}
 
-  console.log('[Antscriber] PCM collected:', pcmSamples, 'samples at', nativeRate, 'Hz =', (pcmSamples / nativeRate).toFixed(1), 's');
-  if (pcmSamples > 0) {
-    // Check first chunk peak
-    const peak = pcmChunks[0].reduce((m, v) => Math.max(m, Math.abs(v)), 0);
-    console.log('[Antscriber] Peak amplitude:', peak);
-  }
+async function handleFile(file) {
+  dropZone.classList.add('has-file');
+  dropPrimary.textContent = file.name;
+  const sizeStr = file.size > 1e9 ? (file.size / 1e9).toFixed(2) + ' GB' : (file.size / 1e6).toFixed(1) + ' MB';
+  dropSec.textContent = sizeStr;
+  outputWrap.style.display = 'none';
+  outputArea.innerHTML = '';
+  transcriptText = '';
 
-  // Resample to 16kHz using OfflineAudioContext
-  async function resampleTo16k(f32, rate) {
-    if (rate === WHISPER_RATE) return f32;
-    const frames = Math.ceil(f32.length * WHISPER_RATE / rate);
-    const ctx = new OfflineAudioContext(1, frames, WHISPER_RATE);
-    const buf = ctx.createBuffer(1, f32.length, rate);
-    buf.copyToChannel(f32, 0);
-    const src = ctx.createBufferSource();
-    src.buffer = buf; src.connect(ctx.destination); src.start(0);
-    const out = await ctx.startRendering();
-    return out.getChannelData(0);
-  }
+  try {
+    const modelKey = MODELS[parseInt(saSlider.value)];
+    const modelId = `Xenova/whisper-${modelKey}`;
 
-  // Flatten all chunks
-  const flat = new Float32Array(pcmSamples);
-  let offset = 0;
-  for (const c of pcmChunks) { flat.set(c, offset); offset += c.length; }
-
-  setStatus('Transcribing...', 'active', 82);
-
-  // Transcribe in 30s windows
-  const windowSamples = WINDOW_SECONDS * nativeRate;
-  const totalChunks = Math.ceil(flat.length / windowSamples);
-  let timeOffset = 0;
-
-  for (let i = 0; i < totalChunks; i++) {
-    const start = i * windowSamples;
-    const chunk = flat.slice(start, start + windowSamples);
-    const chunkOffset = timeOffset;
-    timeOffset += chunk.length / nativeRate;
-
-    const resampled = await resampleTo16k(chunk, nativeRate);
-    const pct = 82 + Math.round(((i + 1) / totalChunks) * 16);
-    onProgress(pct, timeOffset);
-
-    try {
-      const result = await transcriber(resampled, { return_timestamps: true, language: lang });
-      const segs = result.chunks || [{ timestamp: [0, null], text: result.text }];
-      segs.forEach(seg => {
-        const t = seg.text.trim(); if (!t) return;
-        const s = (seg.timestamp?.[0] ?? 0) + chunkOffset;
-        const e = seg.timestamp?.[1] != null ? seg.timestamp[1] + chunkOffset : null;
-        appendSegment(s, e, t);
+    if (!transcriberCache[modelKey]) {
+      setStatus(`Downloading ${MODEL_LABELS[parseInt(saSlider.value)]} model...`, 'active', 5);
+      env.allowLocalModels = false;
+      transcriberCache[modelKey] = await pipeline('automatic-speech-recognition', modelId, {
+        progress_callback: (p) => {
+          if (p.status === 'downloading' && p.total) {
+            const pct = 5 + Math.round((p.loaded / p.total) * 30);
+            setStatus(`Downloading model: ${Math.round((p.loaded / p.total) * 100)}%`, 'active', pct);
+          }
+        }
       });
-    } catch(e) { console.error('[Antscriber] Whisper error:', e); }
+    }
+
+    const lang = langSelect.value === 'auto' ? undefined : langSelect.value;
+
+    await extractAndTranscribe(
+      file,
+      transcriberCache[modelKey],
+      lang,
+      (filePct, audioSeconds) => {
+        if (filePct !== null) {
+          setStatus(`Processing — ${formatTime(audioSeconds)} transcribed`, 'active', filePct);
+        } else {
+          setStatus(`Transcribing — ${formatTime(audioSeconds)} processed`, 'active', null);
+        }
+      }
+    );
+
+    setStatus('Done', 'done', 100);
+
+  } catch(err) {
+    setStatus(err.message || 'Something went wrong.', 'error');
+    progressWrap.style.display = 'none';
+    console.error(err);
   }
+}
+
+function copyTranscript() {
+  if (!transcriptText) return;
+  navigator.clipboard.writeText(transcriptText).then(() => {
+    const btn = document.getElementById('copy-btn');
+    const orig = btn.innerHTML;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.innerHTML = orig; }, 2000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = transcriptText;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
 }
 
 
