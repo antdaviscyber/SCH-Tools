@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.4.0</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.4.1</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -585,36 +585,53 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
       nativeRate = track.audio.sample_rate || 44100;
       nativeChannels = track.audio.channel_count || 2;
 
+      console.log('[Antscriber] Audio track:', { codec: track.codec, sampleRate: nativeRate, channels: nativeChannels });
+
+      let framesDecoded = 0;
+
       audioDecoder = new AudioDecoder({
         output: async (audioData) => {
-          // Copy all channels, mix to mono
           const frames = audioData.numberOfFrames;
           const ch = audioData.numberOfChannels;
           const mono = new Float32Array(frames);
           for (let c = 0; c < ch; c++) {
             const buf = new Float32Array(frames);
-            audioData.copyTo(buf, { planeIndex: c });
+            audioData.copyTo(buf, { planeIndex: c, format: 'f32-planar' });
             for (let i = 0; i < frames; i++) mono[i] += buf[i] / ch;
           }
           audioData.close();
+          if (framesDecoded === 0) {
+            const peak = mono.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+            console.log('[Antscriber] First decoded frame peak amplitude:', peak, 'frames:', frames);
+          }
+          framesDecoded++;
           pcmBuffer.push(mono);
           pcmSamples += mono.length;
           const approxSeconds = timeOffset + pcmSamples / nativeRate;
           onProgress(Math.min(99, (fileOffset / fileSize) * 100), approxSeconds);
           await flushIfReady(false);
         },
-        error: (e) => console.error('AudioDecoder error:', e)
+        error: (e) => console.error('[Antscriber] AudioDecoder error:', e)
       });
 
-      // Detect codec from track
-      let codec = 'mp4a.40.2'; // AAC-LC default
-      if (track.codec) codec = track.codec;
+      let codec = track.codec || 'mp4a.40.2';
 
-      audioDecoder.configure({
-        codec,
-        sampleRate: nativeRate,
-        numberOfChannels: nativeChannels,
-      });
+      // Try to extract AudioSpecificConfig for AAC — required for correct decode
+      let description;
+      try {
+        const trak = mp4boxFile.getTrackById(track.id);
+        const entry = trak?.mdia?.minf?.stbl?.stsd?.entries?.[0];
+        const esds = entry?.esds || entry?.mp4a?.esds;
+        if (esds) {
+          const asc = esds.esd?.descs?.[0]?.descs?.[0]?.descs?.[0]?.data;
+          if (asc) { description = new Uint8Array(asc); console.log('[Antscriber] Got AudioSpecificConfig length:', description.length); }
+        }
+      } catch(e) { console.log('[Antscriber] No AudioSpecificConfig:', e.message); }
+
+      const config = { codec, sampleRate: nativeRate, numberOfChannels: nativeChannels };
+      if (description) config.description = description;
+      console.log('[Antscriber] Configuring decoder:', codec, nativeRate, 'Hz', nativeChannels, 'ch');
+      audioDecoder.configure(config);
       decoderReady = true;
     }
 
