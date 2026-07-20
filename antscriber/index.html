@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.4.4</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.4.5</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -494,163 +494,94 @@ function appendSegment(startSec, endSec, text) {
   transcriptText += `[${label}] ${text}\n`;
 }
 
-// WebCodecs + MP4Box audio extraction
-// Feeds file to MP4Box in chunks, decodes audio with AudioDecoder, transcribes with Whisper
+// Audio extraction using ffmpeg.wasm — handles any format, any size, any structure
+// Loads ffmpeg.wasm once, runs entirely in browser, no server needed
 async function extractAndTranscribe(file, transcriber, lang, onProgress) {
-  // Load MP4Box if needed
-  await new Promise((res, rej) => {
-    if (window.MP4Box) { res(); return; }
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/mp4box@0.5.2/dist/mp4box.all.min.js';
-    s.onload = res; s.onerror = rej;
-    document.head.appendChild(s);
+  const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
+  const { fetchFile, toBlobURL } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
+
+  const ffmpeg = new FFmpeg();
+
+  ffmpeg.on('progress', ({ progress }) => {
+    onProgress(Math.min(85, progress * 100), 0);
   });
 
-  const CHUNK_SIZE = 8 * 1024 * 1024;
-  const fileSize = file.size;
-  let nativeRate = 48000;
-  let nativeChannels = 2;
+  ffmpeg.on('log', ({ message }) => {
+    // Parse duration and time from ffmpeg output for better progress
+    const timeMatch = message.match(/time=(\d+):(\d+):(\d+)/);
+    if (timeMatch) {
+      const secs = parseInt(timeMatch[1])*3600 + parseInt(timeMatch[2])*60 + parseInt(timeMatch[3]);
+      onProgress(null, secs);
+    }
+  });
+
+  setStatus('Loading ffmpeg...', 'active', 5);
+
+  const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+  await ffmpeg.load({
+    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+  });
+
+  setStatus('Writing file...', 'active', 10);
+  const ext = file.name.split('.').pop().toLowerCase() || 'mp4';
+  const inputName = 'input.' + ext;
+  await ffmpeg.writeFile(inputName, await fetchFile(file));
+
+  setStatus('Extracting audio...', 'active', 15);
+  // Extract audio as raw 16kHz mono PCM — exactly what Whisper needs
+  await ffmpeg.exec([
+    '-i', inputName,
+    '-vn',                    // no video
+    '-ar', '16000',           // 16kHz sample rate
+    '-ac', '1',               // mono
+    '-f', 'f32le',            // 32-bit float little-endian PCM
+    'audio.pcm'
+  ]);
+
+  setStatus('Transcribing...', 'active', 50);
+  const pcmData = await ffmpeg.readFile('audio.pcm');
+  const float32 = new Float32Array(pcmData.buffer);
+
+  console.log('[Antscriber] PCM extracted:', float32.length, 'samples =', (float32.length / 16000).toFixed(1), 's');
+  const peak = float32.reduce((m,v) => Math.max(m, Math.abs(v)), 0);
+  console.log('[Antscriber] Peak amplitude:', peak);
+
+  // Clean up ffmpeg files
+  await ffmpeg.deleteFile(inputName);
+  await ffmpeg.deleteFile('audio.pcm');
+
+  // Transcribe in 30s windows
+  const windowSamples = WINDOW_SECONDS * WHISPER_RATE;
+  const totalChunks = Math.ceil(float32.length / windowSamples);
   let timeOffset = 0;
-  let pcmChunks = [];
-  let pcmSamples = 0;
 
-  async function resampleTo16k(f32, rate) {
-    if (rate === WHISPER_RATE) return f32;
-    const frames = Math.ceil(f32.length * WHISPER_RATE / rate);
-    const ctx = new OfflineAudioContext(1, frames, WHISPER_RATE);
-    const buf = ctx.createBuffer(1, f32.length, rate);
-    buf.copyToChannel(f32, 0);
-    const src = ctx.createBufferSource();
-    src.buffer = buf; src.connect(ctx.destination); src.start(0);
-    const out = await ctx.startRendering();
-    return out.getChannelData(0);
-  }
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * windowSamples;
+    const chunk = float32.slice(start, start + windowSamples);
+    const chunkOffset = timeOffset;
+    timeOffset += chunk.length / WHISPER_RATE;
 
-  function takeSamples(count) {
-    const out = new Float32Array(count);
-    let pos = 0;
-    while (pos < count && pcmChunks.length) {
-      const c = pcmChunks[0], need = count - pos;
-      if (c.length <= need) { out.set(c, pos); pos += c.length; pcmChunks.shift(); pcmSamples -= c.length; }
-      else { out.set(c.subarray(0, need), pos); pcmChunks[0] = c.subarray(need); pcmSamples -= need; pos += need; }
-    }
-    return out;
-  }
+    const pct = 50 + Math.round(((i + 1) / totalChunks) * 48);
+    onProgress(pct, timeOffset);
 
-  async function flushWindow(force = false) {
-    const winSamples = WINDOW_SECONDS * nativeRate;
-    while (pcmSamples >= winSamples || (force && pcmSamples > 0)) {
-      const take = force ? pcmSamples : winSamples;
-      const raw = takeSamples(take);
-      const chunkOffset = timeOffset;
-      timeOffset += take / nativeRate;
-      const resampled = await resampleTo16k(raw, nativeRate);
-      try {
-        const result = await transcriber(resampled, { return_timestamps: true, language: lang });
-        const segs = result.chunks || [{ timestamp: [0, null], text: result.text }];
-        segs.forEach(seg => {
-          const t = seg.text.trim(); if (!t) return;
-          const s = (seg.timestamp?.[0] ?? 0) + chunkOffset;
-          const e = seg.timestamp?.[1] != null ? seg.timestamp[1] + chunkOffset : null;
-          appendSegment(s, e, t);
-        });
-      } catch(e) { console.error('[Antscriber] Whisper error:', e); }
-      if (force) break;
-    }
-  }
-
-  // Phase 1: extract all PCM via MP4Box + AudioDecoder
-  await new Promise((resolve, reject) => {
-    const mp4box = MP4Box.createFile();
-    let decoder = null;
-    let trackId = null;
-    let samplesReceived = 0;
-
-    mp4box.onReady = (info) => {
-      const track = info.audioTracks?.[0];
-      if (!track) { reject(new Error('No audio track found.')); return; }
-      nativeRate = track.audio.sample_rate || 48000;
-      nativeChannels = track.audio.channel_count || 2;
-      trackId = track.id;
-      console.log('[Antscriber] Track:', track.codec, nativeRate + 'Hz', nativeChannels + 'ch');
-
-      decoder = new AudioDecoder({
-        output: (audioData) => {
-          const frames = audioData.numberOfFrames;
-          const ch = audioData.numberOfChannels;
-          const mono = new Float32Array(frames);
-          for (let c = 0; c < ch; c++) {
-            const buf = new Float32Array(frames);
-            audioData.copyTo(buf, { planeIndex: c, format: 'f32-planar' });
-            for (let i = 0; i < frames; i++) mono[i] += buf[i] / ch;
-          }
-          audioData.close();
-          pcmChunks.push(mono);
-          pcmSamples += mono.length;
-        },
-        error: (e) => console.error('[Antscriber] Decoder error:', e)
+    try {
+      const result = await transcriber(chunk, { return_timestamps: true, language: lang });
+      const segs = result.chunks || [{ timestamp: [0, null], text: result.text }];
+      segs.forEach(seg => {
+        const t = seg.text.trim(); if (!t) return;
+        const s = (seg.timestamp?.[0] ?? 0) + chunkOffset;
+        const e = seg.timestamp?.[1] != null ? seg.timestamp[1] + chunkOffset : null;
+        appendSegment(s, e, t);
       });
-
-      const config = { codec: track.codec || 'mp4a.40.2', sampleRate: nativeRate, numberOfChannels: nativeChannels };
-      try {
-        const trak = mp4box.getTrackById(track.id);
-        const entry = trak?.mdia?.minf?.stbl?.stsd?.entries?.[0];
-        const esds = entry?.esds || entry?.mp4a?.esds;
-        const asc = esds?.esd?.descs?.[0]?.descs?.[0]?.descs?.[0]?.data;
-        if (asc) { config.description = new Uint8Array(asc); console.log('[Antscriber] Got AudioSpecificConfig'); }
-      } catch(e) {}
-
-      decoder.configure(config);
-      mp4box.setExtractionOptions(trackId, null, { nbSamples: 1000 });
-      mp4box.start();
-    };
-
-    mp4box.onSamples = async (id, ref, samples) => {
-      if (!decoder) return;
-      samplesReceived += samples.length;
-      console.log('[Antscriber] Decoding batch:', samples.length, 'total:', samplesReceived);
-      for (const s of samples) {
-        decoder.decode(new EncodedAudioChunk({
-          type: s.is_sync ? 'key' : 'delta',
-          timestamp: Math.round((s.cts / s.timescale) * 1e6),
-          duration: Math.round((s.duration / s.timescale) * 1e6),
-          data: s.data,
-        }));
-      }
-    };
-
-    mp4box.onError = (e) => console.warn('[Antscriber] MP4Box warning:', e);
-
-    (async () => {
-      let offset = 0;
-      while (offset < fileSize) {
-        const end = Math.min(offset + CHUNK_SIZE, fileSize);
-        const buf = await file.slice(offset, end).arrayBuffer();
-        buf.fileStart = offset;
-        const next = mp4box.appendBuffer(buf);
-        offset = (next !== undefined && next > offset) ? next : end;
-        onProgress(Math.min(85, (offset / fileSize) * 100), timeOffset);
-        await new Promise(r => setTimeout(r, 0));
-      }
-      mp4box.flush();
-      await new Promise(r => setTimeout(r, 100));
-      if (decoder && decoder.state !== 'closed') await decoder.flush();
-      resolve();
-    })().catch(reject);
-  });
-
-  console.log('[Antscriber] PCM extraction done. Total samples:', pcmSamples, 'at', nativeRate, 'Hz =', (pcmSamples/nativeRate).toFixed(1), 's');
-
-  // Phase 2: transcribe accumulated PCM in windows
-  await flushWindow(true);
+    } catch(e) { console.error('[Antscriber] Whisper error:', e); }
+  }
 }
 
 async function handleFile(file) {
   dropZone.classList.add('has-file');
   dropPrimary.textContent = file.name;
-  const sizeStr = file.size > 1e9
-    ? (file.size / 1e9).toFixed(2) + ' GB'
-    : (file.size / 1e6).toFixed(1) + ' MB';
+  const sizeStr = file.size > 1e9 ? (file.size / 1e9).toFixed(2) + ' GB' : (file.size / 1e6).toFixed(1) + ' MB';
   dropSec.textContent = sizeStr;
   outputWrap.style.display = 'none';
   outputArea.innerHTML = '';
@@ -673,7 +604,6 @@ async function handleFile(file) {
       });
     }
 
-    setStatus('Reading audio track...', 'active', 10);
     outputWrap.style.display = 'block';
 
     const lang = langSelect.value === 'auto' ? undefined : langSelect.value;
@@ -683,7 +613,11 @@ async function handleFile(file) {
       transcriberCache[modelKey],
       lang,
       (filePct, audioSeconds) => {
-        setStatus(`Processing — ${formatTime(audioSeconds)} transcribed`, 'active', 10 + filePct * 0.88);
+        if (filePct !== null) {
+          setStatus(`Processing — ${formatTime(audioSeconds)} transcribed`, 'active', filePct);
+        } else {
+          setStatus(`Transcribing — ${formatTime(audioSeconds)} processed`, 'active', null);
+        }
       }
     );
 
@@ -704,7 +638,6 @@ function copyTranscript() {
     btn.textContent = 'Copied!';
     setTimeout(() => { btn.innerHTML = orig; }, 2000);
   }).catch(() => {
-    // Fallback for browsers that block clipboard
     const ta = document.createElement('textarea');
     ta.value = transcriptText;
     document.body.appendChild(ta);
@@ -716,7 +649,7 @@ function copyTranscript() {
     setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
   });
 }
-// Expose to global scope so onclick= can reach it
+
 window.copyTranscript = copyTranscript;
 </script>
 </body>
