@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.4.1</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.4.2</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -523,19 +523,19 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
     let timeOffset = 0;
     const windowSamplesNative = WINDOW_SECONDS * nativeRate; // will be updated once we know rate
 
-    // Simple linear resampler: native rate -> 16000
-    function resampleTo16k(inputF32, inputRate) {
+    // Resample using OfflineAudioContext — browser's native resampler, correct and fast
+    async function resampleTo16k(inputF32, inputRate) {
       if (inputRate === WHISPER_RATE) return inputF32;
-      const ratio = inputRate / WHISPER_RATE;
-      const outLen = Math.floor(inputF32.length / ratio);
-      const out = new Float32Array(outLen);
-      for (let i = 0; i < outLen; i++) {
-        const srcIdx = i * ratio;
-        const lo = Math.floor(srcIdx), hi = Math.min(lo + 1, inputF32.length - 1);
-        const frac = srcIdx - lo;
-        out[i] = inputF32[lo] * (1 - frac) + inputF32[hi] * frac;
-      }
-      return out;
+      const frameCount = Math.ceil(inputF32.length * WHISPER_RATE / inputRate);
+      const offlineCtx = new OfflineAudioContext(1, frameCount, WHISPER_RATE);
+      const srcBuf = offlineCtx.createBuffer(1, inputF32.length, inputRate);
+      srcBuf.copyToChannel(inputF32, 0);
+      const source = offlineCtx.createBufferSource();
+      source.buffer = srcBuf;
+      source.connect(offlineCtx.destination);
+      source.start(0);
+      const rendered = await offlineCtx.startRendering();
+      return rendered.getChannelData(0);
     }
 
     // Flush accumulated PCM to Whisper when we have a full window
@@ -561,7 +561,7 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
             pos += need;
           }
         }
-        const resampled = resampleTo16k(merged, nativeRate);
+        const resampled = await resampleTo16k(merged, nativeRate);
         const chunkOffset = timeOffset;
         timeOffset += take / nativeRate;
         // Transcribe
@@ -740,14 +740,27 @@ async function handleFile(file) {
 }
 
 function copyTranscript() {
+  if (!transcriptText) { alert('Nothing to copy yet.'); return; }
   navigator.clipboard.writeText(transcriptText).then(() => {
     const btn = document.getElementById('copy-btn');
-    btn.textContent = 'Copied';
-    setTimeout(() => {
-      btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy`;
-    }, 2000);
+    const orig = btn.innerHTML;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.innerHTML = orig; }, 2000);
+  }).catch(() => {
+    // Fallback for browsers that block clipboard
+    const ta = document.createElement('textarea');
+    ta.value = transcriptText;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
   });
 }
+// Expose to global scope so onclick= can reach it
+window.copyTranscript = copyTranscript;
 </script>
 </body>
 </html>
