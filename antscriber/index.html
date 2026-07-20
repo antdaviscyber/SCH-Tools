@@ -405,8 +405,8 @@ import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers
 
 const MODELS = ['tiny', 'base', 'small', 'medium'];
 const MODEL_LABELS = ['Tiny (fastest)', 'Base', 'Small', 'Medium (most accurate)'];
-const CHUNK_DURATION = 30; // seconds per Whisper chunk
-const SAMPLE_RATE = 16000;
+const WHISPER_RATE = 16000;
+const WINDOW_SECONDS = 30;
 
 const loadScreen = document.getElementById('loading-screen');
 const loadBar = document.getElementById('load-bar');
@@ -429,7 +429,6 @@ const dropSec = document.getElementById('drop-secondary');
 let transcriptText = '';
 let transcriberCache = {};
 
-// Slider
 function updateSlider() {
   const v = parseInt(saSlider.value);
   saSlider.style.setProperty('--pct', (v / 3 * 100) + '%');
@@ -438,18 +437,14 @@ function updateSlider() {
 saSlider.addEventListener('input', updateSlider);
 updateSlider();
 
-// Boot — real model download with real progress
 async function boot() {
   loadBar.style.width = '5%';
   loadStatus.textContent = 'Loading Whisper engine...';
   await new Promise(r => setTimeout(r, 300));
-
   try {
     env.allowLocalModels = false;
-
     loadBar.style.width = '15%';
-    loadStatus.textContent = 'Downloading base model — this takes a moment on first run...';
-
+    loadStatus.textContent = 'Downloading base model — cached after first run...';
     transcriberCache['base'] = await pipeline('automatic-speech-recognition', 'Xenova/whisper-base', {
       progress_callback: (p) => {
         if (p.status === 'downloading' && p.total) {
@@ -459,25 +454,17 @@ async function boot() {
           const total = (p.total / 1024 / 1024).toFixed(0);
           loadStatus.textContent = `Downloading base model: ${mb} / ${total} MB`;
         }
-        if (p.status === 'ready') {
-          loadBar.style.width = '95%';
-          loadStatus.textContent = 'Model ready — cached for next time';
-        }
+        if (p.status === 'ready') { loadBar.style.width = '95%'; loadStatus.textContent = 'Model ready'; }
       }
     });
-  } catch(e) {
-    loadStatus.textContent = 'Ready (model will download on first use)';
-  }
-
+  } catch(e) { loadStatus.textContent = 'Ready (model downloads on first use)'; }
   loadBar.style.width = '100%';
   await new Promise(r => setTimeout(r, 400));
   loadScreen.classList.add('fade-out');
   setTimeout(() => { loadScreen.style.display = 'none'; app.classList.add('visible'); }, 500);
 }
-
 boot();
 
-// File drop
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
@@ -488,154 +475,214 @@ fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.
 function setStatus(msg, state = 'idle', progress = null) {
   statusText.textContent = msg;
   statusDot.className = 'status-dot' + (state === 'active' ? ' active' : state === 'done' ? ' done' : state === 'error' ? ' error' : '');
-  if (progress !== null) {
-    progressWrap.style.display = 'block';
-    progressFill.style.width = Math.min(100, Math.round(progress)) + '%';
-  }
+  if (progress !== null) { progressWrap.style.display = 'block'; progressFill.style.width = Math.min(100, Math.round(progress)) + '%'; }
 }
 
 function formatTime(s) {
   s = Math.round(s || 0);
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-  return h > 0
-    ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
-    : `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` : `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
 }
 
-// Stream audio from a File using a hidden video element + ScriptProcessorNode.
-// Never loads the whole file — the browser streams it just like normal playback.
-// Captures PCM in rolling 30s windows and passes each to Whisper immediately,
-// so transcription and extraction run in parallel.
-async function streamTranscribe(file, transcriber, lang, onChunk, onProgress) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const video = document.createElement('video');
-    video.src = url;
-    video.volume = 0;          // silent but NOT muted — muted kills audio graph in Safari/Chrome
-    video.preload = 'metadata';
-    video.style.position = 'fixed';
-    video.style.left = '-9999px';
-    video.style.width = '1px';
-    video.style.height = '1px';
-    document.body.appendChild(video);
+function appendSegment(startSec, endSec, text) {
+  const label = endSec != null ? `${formatTime(startSec)} – ${formatTime(endSec)}` : formatTime(startSec);
+  const div = document.createElement('div');
+  div.className = 'segment';
+  div.innerHTML = `<span class="ts">${label}</span><span class="seg-text">${text}</span>`;
+  outputArea.appendChild(div);
+  outputArea.scrollTop = outputArea.scrollHeight;
+  transcriptText += `[${label}] ${text}\n`;
+}
 
-    const CAPTURE_RATE = 16000;
-    const WINDOW_SECONDS = 30;
-    const WINDOW_SAMPLES = CAPTURE_RATE * WINDOW_SECONDS;
+// WebCodecs-based audio extraction + Whisper transcription
+// Streams the file in 4MB chunks, demuxes via MP4Box, decodes via AudioDecoder
+// Never loads the full file into memory
+async function extractAndTranscribe(file, transcriber, lang, onProgress) {
+  // Dynamically load mp4box for demuxing
+  await new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/mp4box@0.5.2/dist/mp4box.all.min.js';
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
 
-    // AudioContext at 16kHz so we capture at Whisper's native rate
-    const audioCtx = new AudioContext({ sampleRate: CAPTURE_RATE });
-    let source, processor;
-    let sampleBuffer = new Float32Array(0);
-    let capturedSeconds = 0;
-    let duration = 0;
+  return new Promise(async (resolve, reject) => {
+    const mp4boxFile = MP4Box.createFile();
+    const CHUNK_SIZE = 4 * 1024 * 1024; // 4MB read chunks
+    const fileSize = file.size;
+    let fileOffset = 0;
+    let audioTrackId = null;
+    let audioDecoder = null;
+    let decoderReady = false;
+    let nativeRate = 44100;
+    let nativeChannels = 2;
+
+    // Resampling buffer — accumulates decoded PCM at native rate
+    let pcmBuffer = [];
+    let pcmSamples = 0;
     let timeOffset = 0;
-    let pendingTranscriptions = [];
-    let extractionDone = false;
+    const windowSamplesNative = WINDOW_SECONDS * nativeRate; // will be updated once we know rate
 
-    function cleanup() {
-      try { processor && processor.disconnect(); } catch(e) {}
-      try { source && source.disconnect(); } catch(e) {}
-      try { audioCtx.close(); } catch(e) {}
-      URL.revokeObjectURL(url);
-      document.body.removeChild(video);
+    // Simple linear resampler: native rate -> 16000
+    function resampleTo16k(inputF32, inputRate) {
+      if (inputRate === WHISPER_RATE) return inputF32;
+      const ratio = inputRate / WHISPER_RATE;
+      const outLen = Math.floor(inputF32.length / ratio);
+      const out = new Float32Array(outLen);
+      for (let i = 0; i < outLen; i++) {
+        const srcIdx = i * ratio;
+        const lo = Math.floor(srcIdx), hi = Math.min(lo + 1, inputF32.length - 1);
+        const frac = srcIdx - lo;
+        out[i] = inputF32[lo] * (1 - frac) + inputF32[hi] * frac;
+      }
+      return out;
     }
 
-    // Append samples to rolling buffer, flush complete windows to Whisper
-    async function flushBuffer(final = false) {
-      while (sampleBuffer.length >= WINDOW_SAMPLES || (final && sampleBuffer.length > 0)) {
-        const chunkSize = final ? sampleBuffer.length : WINDOW_SAMPLES;
-        const chunk = sampleBuffer.slice(0, chunkSize);
-        sampleBuffer = sampleBuffer.slice(chunkSize);
-
-        const chunkOffset = timeOffset;
-        timeOffset += chunk.length / CAPTURE_RATE;
-
-        // Run Whisper on this chunk
-        const p = transcriber(chunk, { return_timestamps: true, language: lang })
-          .then(result => {
-            const segs = result.chunks || [{ timestamp: [0, null], text: result.text }];
-            segs.forEach(seg => {
-              const t = seg.text.trim();
-              if (!t) return;
-              const s = (seg.timestamp?.[0] ?? 0) + chunkOffset;
-              const e = seg.timestamp?.[1] != null ? seg.timestamp[1] + chunkOffset : null;
-              onChunk(s, e, t);
-            });
-          });
-        pendingTranscriptions.push(p);
-
-        if (!final) break; // only flush one window at a time unless finalising
-      }
-    }
-
-    video.addEventListener('error', () => { cleanup(); reject(new Error('Could not stream video file.')); });
-
-    video.addEventListener('loadedmetadata', async () => {
-      duration = video.duration;
-      if (!duration || !isFinite(duration)) {
-        cleanup(); reject(new Error('Could not read video duration.')); return;
-      }
-
-      try {
-        source = audioCtx.createMediaElementSource(video);
-
-        // ScriptProcessorNode: captures audio as it plays
-        // Use 1 input channel — browser will downmix to mono for us
-        processor = audioCtx.createScriptProcessor(4096, 1, 1);
-        processor.onaudioprocess = (e) => {
-          const mono = new Float32Array(e.inputBuffer.getChannelData(0));
-
-          // Append to buffer
-          const merged = new Float32Array(sampleBuffer.length + mono.length);
-          merged.set(sampleBuffer);
-          merged.set(mono, sampleBuffer.length);
-          sampleBuffer = merged;
-
-          capturedSeconds = video.currentTime;
-          onProgress(Math.min(99, (capturedSeconds / duration) * 100), capturedSeconds, duration);
-
-          // Flush a 30s window if we have enough
-          if (sampleBuffer.length >= WINDOW_SAMPLES) {
-            flushBuffer(false);
+    // Flush accumulated PCM to Whisper when we have a full window
+    async function flushIfReady(force = false) {
+      const windowNative = WINDOW_SECONDS * nativeRate;
+      while (pcmSamples >= windowNative || (force && pcmSamples > 0)) {
+        const take = force ? pcmSamples : windowNative;
+        // Merge buffer chunks
+        const merged = new Float32Array(take);
+        let pos = 0;
+        while (pos < take && pcmBuffer.length > 0) {
+          const chunk = pcmBuffer[0];
+          const need = take - pos;
+          if (chunk.length <= need) {
+            merged.set(chunk, pos);
+            pos += chunk.length;
+            pcmBuffer.shift();
+            pcmSamples -= chunk.length;
+          } else {
+            merged.set(chunk.subarray(0, need), pos);
+            pcmBuffer[0] = chunk.subarray(need);
+            pcmSamples -= need;
+            pos += need;
           }
-        };
-
-        source.connect(processor);
-        // Connect to destination so audio flows (required), but video is muted so no sound
-        processor.connect(audioCtx.destination);
-
-        video.addEventListener('ended', async () => {
-          extractionDone = true;
-          // Flush any remaining samples
-          await flushBuffer(true);
-          // Wait for all Whisper jobs to finish
-          await Promise.all(pendingTranscriptions);
-          cleanup();
-          resolve();
-        });
-
-        // Play as fast as the browser allows
-        video.playbackRate = 16;
-        await video.play();
-
-      } catch(err) {
-        cleanup(); reject(err);
+        }
+        const resampled = resampleTo16k(merged, nativeRate);
+        const chunkOffset = timeOffset;
+        timeOffset += take / nativeRate;
+        // Transcribe
+        try {
+          const result = await transcriber(resampled, { return_timestamps: true, language: lang });
+          const segs = result.chunks || [{ timestamp: [0, null], text: result.text }];
+          segs.forEach(seg => {
+            const t = seg.text.trim();
+            if (!t) return;
+            const s = (seg.timestamp?.[0] ?? 0) + chunkOffset;
+            const e = seg.timestamp?.[1] != null ? seg.timestamp[1] + chunkOffset : null;
+            appendSegment(s, e, t);
+          });
+        } catch(e) { console.error('Whisper error:', e); }
+        if (force) break;
       }
-    });
+    }
+
+    // Set up AudioDecoder
+    function setupDecoder(track) {
+      nativeRate = track.audio.sample_rate || 44100;
+      nativeChannels = track.audio.channel_count || 2;
+
+      audioDecoder = new AudioDecoder({
+        output: async (audioData) => {
+          // Copy all channels, mix to mono
+          const frames = audioData.numberOfFrames;
+          const ch = audioData.numberOfChannels;
+          const mono = new Float32Array(frames);
+          for (let c = 0; c < ch; c++) {
+            const buf = new Float32Array(frames);
+            audioData.copyTo(buf, { planeIndex: c });
+            for (let i = 0; i < frames; i++) mono[i] += buf[i] / ch;
+          }
+          audioData.close();
+          pcmBuffer.push(mono);
+          pcmSamples += mono.length;
+          const approxSeconds = timeOffset + pcmSamples / nativeRate;
+          onProgress(Math.min(99, (fileOffset / fileSize) * 100), approxSeconds);
+          await flushIfReady(false);
+        },
+        error: (e) => console.error('AudioDecoder error:', e)
+      });
+
+      // Detect codec from track
+      let codec = 'mp4a.40.2'; // AAC-LC default
+      if (track.codec) codec = track.codec;
+
+      audioDecoder.configure({
+        codec,
+        sampleRate: nativeRate,
+        numberOfChannels: nativeChannels,
+      });
+      decoderReady = true;
+    }
+
+    mp4boxFile.onReady = (info) => {
+      const audioTrack = info.audioTracks?.[0];
+      if (!audioTrack) { reject(new Error('No audio track found in this file.')); return; }
+      audioTrackId = audioTrack.id;
+      setupDecoder(audioTrack);
+      mp4boxFile.setExtractionOptions(audioTrackId, null, { nbSamples: 100 });
+      mp4boxFile.start();
+    };
+
+    mp4boxFile.onSamples = async (trackId, ref, samples) => {
+      if (!decoderReady) return;
+      for (const sample of samples) {
+        const chunk = new EncodedAudioChunk({
+          type: sample.is_sync ? 'key' : 'delta',
+          timestamp: (sample.cts / sample.timescale) * 1e6,
+          duration: (sample.duration / sample.timescale) * 1e6,
+          data: sample.data,
+        });
+        audioDecoder.decode(chunk);
+      }
+    };
+
+    mp4boxFile.onError = (e) => reject(new Error('MP4 parse error: ' + e));
+
+    // Stream file in chunks
+    async function feedFile() {
+      while (fileOffset < fileSize) {
+        const end = Math.min(fileOffset + CHUNK_SIZE, fileSize);
+        const slice = await file.slice(fileOffset, end).arrayBuffer();
+        const buf = slice;
+        buf.fileStart = fileOffset;
+        fileOffset = end;
+        mp4boxFile.appendBuffer(buf);
+        onProgress(Math.min(99, (fileOffset / fileSize) * 100), timeOffset + pcmSamples / nativeRate);
+        // Yield to let decoder callbacks run
+        await new Promise(r => setTimeout(r, 0));
+      }
+      mp4boxFile.flush();
+      // Wait for decoder to drain
+      if (audioDecoder && audioDecoder.decodeQueueSize > 0) {
+        await audioDecoder.flush();
+      } else if (audioDecoder) {
+        await audioDecoder.flush();
+      }
+      // Flush remaining PCM to Whisper
+      await flushIfReady(true);
+      resolve();
+    }
+
+    feedFile().catch(reject);
   });
 }
 
 async function handleFile(file) {
   dropZone.classList.add('has-file');
   dropPrimary.textContent = file.name;
-  dropSec.textContent = (file.size / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+  const sizeStr = file.size > 1e9
+    ? (file.size / 1e9).toFixed(2) + ' GB'
+    : (file.size / 1e6).toFixed(1) + ' MB';
+  dropSec.textContent = sizeStr;
   outputWrap.style.display = 'none';
   outputArea.innerHTML = '';
   transcriptText = '';
 
   try {
-    // Load model first
     const modelKey = MODELS[parseInt(saSlider.value)];
     const modelId = `Xenova/whisper-${modelKey}`;
 
@@ -652,34 +699,17 @@ async function handleFile(file) {
       });
     }
 
-    setStatus('Streaming audio...', 'active', 35);
+    setStatus('Reading audio track...', 'active', 10);
     outputWrap.style.display = 'block';
 
     const lang = langSelect.value === 'auto' ? undefined : langSelect.value;
-    let allPlain = '';
 
-    await streamTranscribe(
+    await extractAndTranscribe(
       file,
       transcriberCache[modelKey],
       lang,
-      // onChunk — called as each segment comes in
-      (startSec, endSec, text) => {
-        const label = endSec != null
-          ? `${formatTime(startSec)} – ${formatTime(endSec)}`
-          : formatTime(startSec);
-        const div = document.createElement('div');
-        div.className = 'segment';
-        div.innerHTML = `<span class="ts">${label}</span><span class="seg-text">${text}</span>`;
-        outputArea.appendChild(div);
-        outputArea.scrollTop = outputArea.scrollHeight;
-        allPlain += `[${label}] ${text}\n`;
-        transcriptText = allPlain;
-      },
-      // onProgress
-      (pct, elapsed, total) => {
-        const elStr = formatTime(elapsed);
-        const totStr = formatTime(total);
-        setStatus(`Extracting & transcribing — ${elStr} / ${totStr}`, 'active', 35 + pct * 0.63);
+      (filePct, audioSeconds) => {
+        setStatus(`Processing — ${formatTime(audioSeconds)} transcribed`, 'active', 10 + filePct * 0.88);
       }
     );
 
@@ -704,4 +734,3 @@ function copyTranscript() {
 </script>
 </body>
 </html>
-
