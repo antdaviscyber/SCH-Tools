@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.4.7</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.4.8</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -516,17 +516,12 @@ async function extractAndTranscribe(file, transcriber, lang, onProgress) {
 
   setStatus('Loading ffmpeg...', 'active', 5);
 
+  // Use single-threaded core — no SharedArrayBuffer required, works on GitHub Pages
   const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
-  const workerURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js';
-
-  // Worker must be same-origin — fetch and create a blob URL
-  const workerBlob = await fetch(workerURL).then(r => r.blob());
-  const workerBlobURL = URL.createObjectURL(workerBlob);
 
   await ffmpeg.load({
     coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
     wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    workerURL: workerBlobURL,
   });
 
   setStatus('Writing file...', 'active', 10);
