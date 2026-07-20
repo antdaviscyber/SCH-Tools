@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.4.5</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.4.6</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -651,6 +651,17 @@ function copyTranscript() {
 }
 
 window.copyTranscript = copyTranscript;
+
+// Register service worker for COOP/COEP headers (required for ffmpeg.wasm SharedArrayBuffer)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    if (reg.installing) {
+      reg.installing.addEventListener('statechange', (e) => {
+        if (e.target.state === 'activated') window.location.reload();
+      });
+    }
+  }).catch(e => console.warn('[Antscriber] SW registration failed:', e));
+}
 </script>
 </body>
 </html>
