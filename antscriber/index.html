@@ -383,7 +383,7 @@
     <div id="output-wrap">
       <div class="output-header">
         <span class="output-label">Transcript</span>
-        <button class="copy-btn" id="copy-btn" onclick="copyTranscript()">
+        <button class="copy-btn" id="copy-btn" id="copy-btn-el">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
           </svg>
@@ -395,7 +395,7 @@
   </main>
 
   <footer>
-    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.4.9</span></span>
+    <span class="footer-note">Runs entirely in your browser. No data sent anywhere. <span style="color:var(--border-strong);margin-left:0.5rem;">v0.5.0</span></span>
     <a href="https://antdavis.com" class="footer-brand">ANTDAVIS</a>
   </footer>
 </div>
@@ -465,6 +465,7 @@ async function boot() {
 }
 boot();
 
+document.getElementById('copy-btn-el').addEventListener('click', () => copyTranscript());
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
