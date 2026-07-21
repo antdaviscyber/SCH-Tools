@@ -202,6 +202,10 @@
     color: var(--grey);
     margin-top: 12px;
   }
+  .feature-status .live {
+    color: #2FA84F;
+    font-weight: 700;
+  }
   .feature-cta {
     z-index: 1;
     display: flex;
@@ -221,12 +225,23 @@
     transition: background 0.15s ease, color 0.15s ease;
   }
   .btn:hover { background: var(--yellow); color: var(--ink); }
+  .btn-secondary {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    white-space: nowrap;
+    transition: border-color 0.15s ease;
+  }
+  .btn-secondary:hover { border-color: var(--ink); color: var(--ink); }
 
   /* ---------- GRID ---------- */
   .grid {
     max-width: 1080px;
     margin: 20px auto 0;
-    padding: 0 28px 100px;
+    padding: 0 28px 80px;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 18px;
@@ -302,7 +317,7 @@
   .footer-inner {
     max-width: 1080px;
     margin: 0 auto;
-    padding: 30px 28px;
+    padding: 28px 28px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -344,11 +359,12 @@
 
 <div class="bar">
   <div class="bar-inner">
-    <div class="brand">ANT DAVIS</div>
+    <a href="https://antdavis.com" class="brand">ANT DAVIS</a>
     <nav class="bar-nav">
-      <a href="https://antdavis.com">Home</a>
+      <a href="https://antdavis.com">antdavis.com</a>
       <a href="https://instagram.com/antdaviscyber">Instagram</a>
       <a href="https://tiktok.com/@antdaviscyber">TikTok</a>
+      <a href="https://linkedin.com/in/antdaviscyber">LinkedIn</a>
     </nav>
   </div>
 </div>
@@ -366,8 +382,8 @@
     <div class="feature-mark">01 / FEATURED</div>
     <div class="feature-body">
       <h2>ExtRenew</h2>
-      <p>A recurring, 30-day permissions checkup for every other Chrome extension you've got installed. Plain-English explanations, a rating for each one, and it never phones home. Everything stays on your machine.</p>
-      <div class="feature-status">STATUS: Currently in private testing on the Chrome Web Store</div>
+      <p>A recurring, 30-day permissions checkup for every other Chrome or Firefox extension you've got installed. Plain-English explanations, a rating for each one, and it never phones home. Everything stays on your machine.</p>
+      <div class="feature-status">STATUS: <span class="live">Live</span> — available on the Chrome Web Store and Firefox Add-ons</div>
     </div>
     <div class="feature-cta">
       <a class="btn" href="https://extrenew.com">Visit ExtRenew.com →</a>
@@ -379,7 +395,7 @@
     <div class="feature-body">
       <h2>PosterPrompt</h2>
       <p>Tired of your AI-generated posters looking like every other piece of AI poster slop out there? Meet PosterPrompt. A poster prompt generator built to get you past the generic stuff, straight to prompts with actual style.</p>
-      <div class="feature-status">STATUS: Live</div>
+      <div class="feature-status">STATUS: <span class="live">Live</span></div>
     </div>
     <div class="feature-cta">
       <a class="btn" href="https://antdaviscyber.github.io/SCH-Tools/posterprompt/">Open PosterPrompt →</a>
@@ -432,6 +448,7 @@
   <div class="footer-inner">
     <div class="footer-brand">ANT DAVIS CYBER</div>
     <div class="footer-links">
+      <a href="https://antdavis.com">antdavis.com</a>
       <a href="https://instagram.com/antdaviscyber">Instagram</a>
       <a href="https://tiktok.com/@antdaviscyber">TikTok</a>
       <a href="https://linkedin.com/in/antdaviscyber">LinkedIn</a>
