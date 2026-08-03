@@ -197,8 +197,16 @@
     </label>
   </div>
 
+  <div class="toggle-row">
+    <span>Crop to mark (small draggable image)</span>
+    <label class="switch">
+      <input type="checkbox" id="cropMode">
+      <span class="slider"></span>
+    </label>
+  </div>
+
   <button id="download">Download Transparent PNG</button>
-  <p class="hint">1080×1920 canvas, transparent everywhere except the corner mark. Drop it into your editing app as an overlay layer above the whole clip, no need to trim or reposition per video.</p>
+  <p class="hint" id="hintText">1080×1920 canvas, transparent everywhere except the corner mark. Drop it into your editing app as an overlay layer above the whole clip, no need to trim or reposition per video.</p>
 </div>
 
 <script>
@@ -228,77 +236,99 @@ function toBinary(str) {
 const marginLeft = 56;
 const marginTop = 64;
 
-function drawBarcode(topY) {
-  const barCount = 14;
-  const barMaxH = 22;
-  ctx.fillStyle = '#FFD100';
-  let x = marginLeft;
+// Draws the corner mark starting at (x0, y0) on any given context.
+// Returns the bounding size actually used, so a crop export can size its canvas to fit.
+function drawMark(targetCtx, x0, y0, opts) {
+  const { date, handle, site, showEgg } = opts;
+  let y = y0;
+  let maxWidth = 0;
+
+  // barcode ticks
+  targetCtx.fillStyle = '#FFD100';
+  let x = x0;
+  const barCount = 14, barMaxH = 22;
   for (let i = 0; i < barCount; i++) {
     const r = seededRandom(i * 12.9898);
     const h = 8 + r * barMaxH;
     const w = r > 0.7 ? 4 : 2;
-    ctx.fillRect(x, topY - h, w, h);
+    targetCtx.fillRect(x, y + 22 - h, w, h);
     x += w + 3;
   }
-  return x; // rightmost x reached
-}
-
-function render() {
-  ctx.clearRect(0, 0, W, H);
-
-  const date = document.getElementById('date').value || '';
-  const handle = document.getElementById('handle').value || '';
-  const site = document.getElementById('site').value || '';
-  const showEgg = document.getElementById('easterEgg').checked;
-
-  let y = marginTop;
-
-  // barcode ticks
-  drawBarcode(y + 22);
+  maxWidth = Math.max(maxWidth, x - x0);
   y += 40;
 
   // date, bold, left aligned
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#F5F5F0';
-  ctx.font = '700 30px "JetBrains Mono", monospace';
-  ctx.fillText(date, marginLeft, y + 26);
+  targetCtx.textAlign = 'left';
+  targetCtx.fillStyle = '#F5F5F0';
+  targetCtx.font = '700 30px "JetBrains Mono", monospace';
+  targetCtx.fillText(date, x0, y + 26);
+  maxWidth = Math.max(maxWidth, targetCtx.measureText(date).width);
   y += 44;
 
   // yellow accent rule
-  ctx.fillStyle = '#FFD100';
-  ctx.fillRect(marginLeft, y, 140, 3);
+  targetCtx.fillStyle = '#FFD100';
+  targetCtx.fillRect(x0, y, 140, 3);
+  maxWidth = Math.max(maxWidth, 140);
   y += 26;
 
   // handle
-  ctx.fillStyle = '#FFD100';
-  ctx.font = '700 22px "JetBrains Mono", monospace';
-  ctx.fillText(handle, marginLeft, y + 18);
+  targetCtx.fillStyle = '#FFD100';
+  targetCtx.font = '700 22px "JetBrains Mono", monospace';
+  targetCtx.fillText(handle, x0, y + 18);
+  maxWidth = Math.max(maxWidth, targetCtx.measureText(handle).width);
   y += 32;
 
   // site
-  ctx.fillStyle = '#6B6B66';
-  ctx.font = '400 18px "JetBrains Mono", monospace';
-  ctx.fillText(site, marginLeft, y + 16);
+  targetCtx.fillStyle = '#6B6B66';
+  targetCtx.font = '400 18px "JetBrains Mono", monospace';
+  targetCtx.fillText(site, x0, y + 16);
+  maxWidth = Math.max(maxWidth, targetCtx.measureText(site).width);
   y += 30;
 
   // optional binary easter egg, small, faint
   if (showEgg) {
-    ctx.fillStyle = 'rgba(107, 107, 102, 0.6)';
-    ctx.font = '400 12px "JetBrains Mono", monospace';
+    targetCtx.fillStyle = 'rgba(107, 107, 102, 0.6)';
+    targetCtx.font = '400 12px "JetBrains Mono", monospace';
     const bin = toBinary('CYBER');
-    // wrap into two short lines if needed, left aligned
     const words = bin.split(' ');
-    let line1 = words.slice(0, 3).join(' ');
-    let line2 = words.slice(3).join(' ');
-    ctx.fillText(line1, marginLeft, y + 12);
-    ctx.fillText(line2, marginLeft, y + 26);
+    const line1 = words.slice(0, 3).join(' ');
+    const line2 = words.slice(3).join(' ');
+    targetCtx.fillText(line1, x0, y + 12);
+    targetCtx.fillText(line2, x0, y + 26);
+    maxWidth = Math.max(maxWidth, targetCtx.measureText(line1).width, targetCtx.measureText(line2).width);
+    y += 30;
   }
+
+  return { width: maxWidth, height: y - y0 };
+}
+
+function currentOpts() {
+  return {
+    date: document.getElementById('date').value || '',
+    handle: document.getElementById('handle').value || '',
+    site: document.getElementById('site').value || '',
+    showEgg: document.getElementById('easterEgg').checked,
+  };
+}
+
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  drawMark(ctx, marginLeft, marginTop, currentOpts());
+}
+
+function updateHint() {
+  const cropMode = document.getElementById('cropMode').checked;
+  document.getElementById('hintText').textContent = cropMode
+    ? 'Small transparent PNG cropped tight to the mark. Drag it in, resize, and place it wherever it needs to sit on your footage.'
+    : '1080×1920 canvas, transparent everywhere except the corner mark. Drop it into your editing app as an overlay layer above the whole clip, no need to trim or reposition per video.';
 }
 
 ['date', 'handle', 'site', 'easterEgg'].forEach(id => {
   document.getElementById(id).addEventListener('input', render);
   document.getElementById(id).addEventListener('change', render);
 });
+document.getElementById('cropMode').addEventListener('change', updateHint);
+updateHint();
 
 if (document.fonts && document.fonts.load) {
   Promise.all([
@@ -309,14 +339,40 @@ if (document.fonts && document.fonts.load) {
 }
 setTimeout(render, 400);
 
-async function downloadOverlay() {
-  render(); // ensure latest state before export
-  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+async function exportCanvasAsPng(sourceCanvas, filename) {
+  const blob = await new Promise(res => sourceCanvas.toBlob(res, 'image/png'));
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `corner-overlay-${document.getElementById('date').value.replace(/\./g, '-')}.png`;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+async function downloadOverlay() {
+  const dateVal = document.getElementById('date').value.replace(/\./g, '-');
+  const cropMode = document.getElementById('cropMode').checked;
+
+  if (!cropMode) {
+    render(); // ensure latest state before export
+    await exportCanvasAsPng(canvas, `corner-overlay-${dateVal}.png`);
+    return;
+  }
+
+  // Crop export: measure first on a scratch canvas, then draw onto a
+  // canvas sized exactly to the mark plus a small padding border.
+  const pad = 20;
+  const scratch = document.createElement('canvas');
+  scratch.width = 1400; scratch.height = 400; // generous scratch space just to measure
+  const scratchCtx = scratch.getContext('2d');
+  const size = drawMark(scratchCtx, pad, pad, currentOpts());
+
+  const cropCanvas = document.createElement('canvas');
+  cropCanvas.width = Math.ceil(size.width + pad * 2);
+  cropCanvas.height = Math.ceil(size.height + pad * 2);
+  const cropCtx = cropCanvas.getContext('2d');
+  drawMark(cropCtx, pad, pad, currentOpts());
+
+  await exportCanvasAsPng(cropCanvas, `corner-mark-${dateVal}.png`);
 }
 document.getElementById('download').addEventListener('click', downloadOverlay);
 </script>
