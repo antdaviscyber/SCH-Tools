@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Corner Overlay Generator</title>
+<style>
+  @font-face {
+    font-family: 'BarberChop';
+    src: url('https://raw.githubusercontent.com/antdaviscyber/assets/main/BarberChop.otf') format('opentype');
+    font-display: swap;
+  }
+
+  :root {
+    --black: #0A0A0A;
+    --yellow: #FFD100;
+    --off-white: #F5F5F0;
+    --grey: #6B6B66;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: #141414;
+    color: var(--off-white);
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    padding: 16px;
+    padding-bottom: 48px;
+  }
+
+  h1 {
+    font-family: 'BarberChop', sans-serif;
+    color: var(--yellow);
+    font-size: 20px;
+    letter-spacing: 0.5px;
+    margin: 4px 0 4px;
+    text-transform: uppercase;
+  }
+
+  .sub {
+    font-size: 12px;
+    color: var(--grey);
+    margin-bottom: 18px;
+  }
+
+  .checker {
+    background-image:
+      linear-gradient(45deg, #2a2a2a 25%, transparent 25%),
+      linear-gradient(-45deg, #2a2a2a 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #2a2a2a 75%),
+      linear-gradient(-45deg, transparent 75%, #2a2a2a 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    background-color: #1a1a1a;
+  }
+
+  .canvas-wrap {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto 20px;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px #2a2a2a;
+  }
+
+  canvas {
+    width: 100%;
+    display: block;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--grey);
+    margin: 14px 0 6px;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: #1c1c1c;
+    border: 1px solid #333;
+    color: var(--off-white);
+    font-family: inherit;
+    font-size: 15px;
+    padding: 12px;
+    border-radius: 4px;
+  }
+
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding: 12px;
+    background: #1c1c1c;
+    border-radius: 4px;
+    border: 1px solid #333;
+  }
+
+  .toggle-row span { font-size: 13px; }
+
+  .switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+  }
+
+  .switch input { opacity: 0; width: 0; height: 0; }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #444;
+    border-radius: 24px;
+    transition: 0.2s;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.2s;
+  }
+
+  input:checked + .slider { background-color: var(--yellow); }
+  input:checked + .slider:before { transform: translateX(20px); }
+
+  button {
+    width: 100%;
+    margin-top: 22px;
+    padding: 16px;
+    background: var(--yellow);
+    color: var(--black);
+    border: none;
+    border-radius: 4px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  button:active { opacity: 0.85; }
+
+  .hint {
+    font-size: 11px;
+    color: var(--grey);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .container { max-width: 400px; margin: 0 auto; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Corner Overlay Generator</h1>
+  <p class="sub">Small transparent mark, top-left. Clears the TikTok/Reels/Shorts icon rail on the right, sits through the whole video.</p>
+
+  <div class="canvas-wrap checker">
+    <canvas id="canvas" width="1080" height="1920"></canvas>
+  </div>
+
+  <label for="date">Date</label>
+  <input type="text" id="date" value="">
+
+  <div class="row">
+    <div>
+      <label for="handle">Handle</label>
+      <input type="text" id="handle" value="@antdaviscyber">
+    </div>
+    <div>
+      <label for="site">Site</label>
+      <input type="text" id="site" value="antdavis.com">
+    </div>
+  </div>
+
+  <div class="toggle-row">
+    <span>Binary easter egg (decodes to CYBER)</span>
+    <label class="switch">
+      <input type="checkbox" id="easterEgg" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <button id="download">Download Transparent PNG</button>
+  <p class="hint">1080×1920 canvas, transparent everywhere except the corner mark. Drop it into your editing app as an overlay layer above the whole clip, no need to trim or reposition per video.</p>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+function todayStr() {
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}`;
+}
+document.getElementById('date').value = todayStr();
+
+function seededRandom(seed) {
+  let x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+function toBinary(str) {
+  return str.split('').map(c => c.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
+}
+
+// top-left corner geometry (clear of TikTok/Reels/Shorts right-side icon rail)
+const marginLeft = 56;
+const marginTop = 64;
+
+function drawBarcode(topY) {
+  const barCount = 14;
+  const barMaxH = 22;
+  ctx.fillStyle = '#FFD100';
+  let x = marginLeft;
+  for (let i = 0; i < barCount; i++) {
+    const r = seededRandom(i * 12.9898);
+    const h = 8 + r * barMaxH;
+    const w = r > 0.7 ? 4 : 2;
+    ctx.fillRect(x, topY - h, w, h);
+    x += w + 3;
+  }
+  return x; // rightmost x reached
+}
+
+function render() {
+  ctx.clearRect(0, 0, W, H);
+
+  const date = document.getElementById('date').value || '';
+  const handle = document.getElementById('handle').value || '';
+  const site = document.getElementById('site').value || '';
+  const showEgg = document.getElementById('easterEgg').checked;
+
+  let y = marginTop;
+
+  // barcode ticks
+  drawBarcode(y + 22);
+  y += 40;
+
+  // date, bold, left aligned
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#F5F5F0';
+  ctx.font = '700 30px "JetBrains Mono", monospace';
+  ctx.fillText(date, marginLeft, y + 26);
+  y += 44;
+
+  // yellow accent rule
+  ctx.fillStyle = '#FFD100';
+  ctx.fillRect(marginLeft, y, 140, 3);
+  y += 26;
+
+  // handle
+  ctx.fillStyle = '#FFD100';
+  ctx.font = '700 22px "JetBrains Mono", monospace';
+  ctx.fillText(handle, marginLeft, y + 18);
+  y += 32;
+
+  // site
+  ctx.fillStyle = '#6B6B66';
+  ctx.font = '400 18px "JetBrains Mono", monospace';
+  ctx.fillText(site, marginLeft, y + 16);
+  y += 30;
+
+  // optional binary easter egg, small, faint
+  if (showEgg) {
+    ctx.fillStyle = 'rgba(107, 107, 102, 0.6)';
+    ctx.font = '400 12px "JetBrains Mono", monospace';
+    const bin = toBinary('CYBER');
+    // wrap into two short lines if needed, left aligned
+    const words = bin.split(' ');
+    let line1 = words.slice(0, 3).join(' ');
+    let line2 = words.slice(3).join(' ');
+    ctx.fillText(line1, marginLeft, y + 12);
+    ctx.fillText(line2, marginLeft, y + 26);
+  }
+}
+
+['date', 'handle', 'site', 'easterEgg'].forEach(id => {
+  document.getElementById(id).addEventListener('input', render);
+  document.getElementById(id).addEventListener('change', render);
+});
+
+if (document.fonts && document.fonts.load) {
+  Promise.all([
+    document.fonts.load("700 30px 'JetBrains Mono'")
+  ]).finally(render);
+} else {
+  render();
+}
+setTimeout(render, 400);
+
+async function downloadOverlay() {
+  render(); // ensure latest state before export
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `corner-overlay-${document.getElementById('date').value.replace(/\./g, '-')}.png`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+document.getElementById('download').addEventListener('click', downloadOverlay);
+</script>
+
+</body>
+</html>
