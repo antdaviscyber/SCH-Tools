@@ -1,381 +1,201 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Corner Overlay Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  @font-face {
-    font-family: 'BarberChop';
-    src: url('https://raw.githubusercontent.com/antdaviscyber/assets/main/BarberChop.otf') format('opentype');
-    font-display: swap;
-  }
-
-  :root {
-    --black: #0A0A0A;
-    --yellow: #FFD100;
-    --off-white: #F5F5F0;
-    --grey: #6B6B66;
-  }
-
+  :root { --black:#0A0A0A; --yellow:#FFD100; --off-white:#F5F5F0; --grey:#6B6B66; }
   * { box-sizing: border-box; }
-
-  body {
-    margin: 0;
-    background: #141414;
-    color: var(--off-white);
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
-    padding: 16px;
-    padding-bottom: 48px;
-  }
-
-  h1 {
-    font-family: 'BarberChop', sans-serif;
-    color: var(--yellow);
-    font-size: 20px;
-    letter-spacing: 0.5px;
-    margin: 4px 0 4px;
-    text-transform: uppercase;
-  }
-
-  .sub {
-    font-size: 12px;
-    color: var(--grey);
-    margin-bottom: 18px;
-  }
-
+  body { margin:0; background:#141414; color:var(--off-white); font-family:'JetBrains Mono','Courier New',monospace; padding:16px; padding-bottom:48px; }
+  h1 { color:var(--yellow); font-size:20px; letter-spacing:.5px; margin:4px 0; text-transform:uppercase; }
+  .sub { font-size:12px; color:var(--grey); margin:0 0 18px; }
   .checker {
     background-image:
-      linear-gradient(45deg, #2a2a2a 25%, transparent 25%),
-      linear-gradient(-45deg, #2a2a2a 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, #2a2a2a 75%),
-      linear-gradient(-45deg, transparent 75%, #2a2a2a 75%);
-    background-size: 20px 20px;
-    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-    background-color: #1a1a1a;
+      linear-gradient(45deg,#2a2a2a 25%,transparent 25%),
+      linear-gradient(-45deg,#2a2a2a 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#2a2a2a 75%),
+      linear-gradient(-45deg,transparent 75%,#2a2a2a 75%);
+    background-size:20px 20px; background-position:0 0,0 10px,10px -10px,-10px 0; background-color:#1a1a1a;
   }
-
-  .canvas-wrap {
-    width: 100%;
-    max-width: 300px;
-    margin: 0 auto 20px;
-    border-radius: 4px;
-    overflow: hidden;
-    box-shadow: 0 0 0 1px #2a2a2a;
-  }
-
-  canvas {
-    width: 100%;
-    display: block;
-  }
-
-  label {
-    display: block;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--grey);
-    margin: 14px 0 6px;
-  }
-
-  input[type="text"] {
-    width: 100%;
-    background: #1c1c1c;
-    border: 1px solid #333;
-    color: var(--off-white);
-    font-family: inherit;
-    font-size: 15px;
-    padding: 12px;
-    border-radius: 4px;
-  }
-
-  .row { display: flex; gap: 10px; }
-  .row > div { flex: 1; }
-
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 16px;
-    padding: 12px;
-    background: #1c1c1c;
-    border-radius: 4px;
-    border: 1px solid #333;
-  }
-
-  .toggle-row span { font-size: 13px; }
-
-  .switch {
-    position: relative;
-    width: 44px;
-    height: 24px;
-  }
-
-  .switch input { opacity: 0; width: 0; height: 0; }
-
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    inset: 0;
-    background-color: #444;
-    border-radius: 24px;
-    transition: 0.2s;
-  }
-
-  .slider:before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    border-radius: 50%;
-    transition: 0.2s;
-  }
-
-  input:checked + .slider { background-color: var(--yellow); }
-  input:checked + .slider:before { transform: translateX(20px); }
-
-  button {
-    width: 100%;
-    margin-top: 22px;
-    padding: 16px;
-    background: var(--yellow);
-    color: var(--black);
-    border: none;
-    border-radius: 4px;
-    font-family: inherit;
-    font-weight: 700;
-    font-size: 14px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    cursor: pointer;
-  }
-
-  button:active { opacity: 0.85; }
-
-  .hint {
-    font-size: 11px;
-    color: var(--grey);
-    margin-top: 8px;
-    line-height: 1.5;
-  }
-
-  .container { max-width: 400px; margin: 0 auto; }
+  .canvas-wrap { display:block; width:fit-content; max-width:100%; margin:0 auto 20px; border-radius:4px; overflow:hidden; box-shadow:0 0 0 1px #2a2a2a; }
+  canvas { max-width:100%; display:block; }
+  label.f { display:block; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--grey); margin:14px 0 6px; }
+  input[type="text"] { width:100%; background:#1c1c1c; border:1px solid #333; color:var(--off-white); font-family:inherit; font-size:16px; padding:12px; border-radius:4px; }
+  .row { display:flex; gap:10px; }
+  .row > div { flex:1; }
+  .toggle-row { display:flex; align-items:center; justify-content:space-between; margin-top:16px; padding:12px; background:#1c1c1c; border-radius:4px; border:1px solid #333; }
+  .toggle-row span { font-size:13px; }
+  .switch { position:relative; width:44px; height:24px; }
+  .switch input { opacity:0; width:0; height:0; }
+  .slider { position:absolute; cursor:pointer; inset:0; background:#444; border-radius:24px; transition:.2s; }
+  .slider:before { position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
+  input:checked + .slider { background:var(--yellow); }
+  input:checked + .slider:before { transform:translateX(20px); }
+  button { width:100%; margin-top:22px; padding:16px; background:var(--yellow); color:var(--black); border:none; border-radius:4px; font-family:inherit; font-weight:700; font-size:14px; letter-spacing:1px; text-transform:uppercase; cursor:pointer; }
+  button:active { opacity:.85; }
+  .hint { font-size:11px; color:var(--grey); margin-top:8px; line-height:1.5; }
+  .container { max-width:400px; margin:0 auto; }
+  #out { display:none; margin-top:18px; text-align:center; }
+  #out img { max-width:100%; background:#1a1a1a; border:1px solid #333; }
 </style>
 </head>
 <body>
-
 <div class="container">
-  <h1>Corner Overlay Generator</h1>
-  <p class="sub">Small transparent mark, top-left. Clears the TikTok/Reels/Shorts icon rail on the right, sits through the whole video.</p>
+  <h1>Corner Overlay</h1>
+  <p class="sub">Small transparent mark. Drag it into place in your editor.</p>
 
-  <div class="canvas-wrap checker">
-    <canvas id="canvas" width="1080" height="1920"></canvas>
-  </div>
-
-  <label for="date">Date</label>
-  <input type="text" id="date" value="">
+  <div class="canvas-wrap checker"><canvas id="canvas" width="300" height="200"></canvas></div>
 
   <div class="row">
     <div>
-      <label for="handle">Handle</label>
-      <input type="text" id="handle" value="@antdaviscyber">
+      <label class="f" for="date">Date</label>
+      <input type="text" id="date" autocapitalize="characters">
     </div>
     <div>
-      <label for="site">Site</label>
-      <input type="text" id="site" value="antdavis.com">
+      <label class="f" for="handle">Handle</label>
+      <input type="text" id="handle" value="@antdaviscyber">
     </div>
   </div>
 
-  <div class="toggle-row">
-    <span>Binary easter egg (decodes to CYBER)</span>
-    <label class="switch">
-      <input type="checkbox" id="easterEgg" checked>
-      <span class="slider"></span>
-    </label>
-  </div>
+  <label class="f" for="site">Site</label>
+  <input type="text" id="site" value="antdavis.com">
 
   <div class="toggle-row">
-    <span>Crop to mark (small draggable image)</span>
-    <label class="switch">
-      <input type="checkbox" id="cropMode">
-      <span class="slider"></span>
-    </label>
+    <span>Binary easter egg (CYBER)</span>
+    <label class="switch"><input type="checkbox" id="easterEgg" checked><span class="slider"></span></label>
   </div>
 
-  <button id="download">Download Transparent PNG</button>
-  <p class="hint" id="hintText">1080×1920 canvas, transparent everywhere except the corner mark. Drop it into your editing app as an overlay layer above the whole clip, no need to trim or reposition per video.</p>
+  <button id="download">Download transparent PNG</button>
+  <p class="hint">Exports a small transparent PNG cropped tight to the mark.</p>
+
+  <div id="out">
+    <p class="hint">If the download did not start, press and hold the image to save it.</p>
+    <img id="outImg" alt="Overlay">
+  </div>
 </div>
 
 <script>
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const W = canvas.width, H = canvas.height;
+const $ = id => document.getElementById(id);
 
+// Date format: ISO order with a spelled month, for example 2026-OCT-14
 function todayStr() {
   const d = new Date();
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  return `${dd}.${mm}.${yyyy}`;
+  const mon = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
+  return `${d.getFullYear()}-${mon}-${String(d.getDate()).padStart(2, '0')}`;
 }
-document.getElementById('date').value = todayStr();
+$('date').value = todayStr();
 
-function seededRandom(seed) {
-  let x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
+function seededRandom(seed) { const x = Math.sin(seed) * 10000; return x - Math.floor(x); }
+function toBinary(str) { return str.split('').map(c => c.charCodeAt(0).toString(2).padStart(8,'0')).join(' '); }
 
-function toBinary(str) {
-  return str.split('').map(c => c.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
-}
+const PAD = 20;
 
-// top-left corner geometry (clear of TikTok/Reels/Shorts right-side icon rail)
-const marginLeft = 56;
-const marginTop = 64;
-
-// Draws the corner mark starting at (x0, y0) on any given context.
-// Returns the bounding size actually used, so a crop export can size its canvas to fit.
-function drawMark(targetCtx, x0, y0, opts) {
-  const { date, handle, site, showEgg } = opts;
-  let y = y0;
-  let maxWidth = 0;
+// Draws the mark from (x0, y0) on any context and returns the size it used.
+function drawMark(c, x0, y0, o) {
+  let y = y0, maxW = 0;
+  c.textAlign = 'left';
 
   // barcode ticks
-  targetCtx.fillStyle = '#FFD100';
+  c.fillStyle = '#FFD100';
   let x = x0;
-  const barCount = 14, barMaxH = 22;
-  for (let i = 0; i < barCount; i++) {
+  for (let i = 0; i < 14; i++) {
     const r = seededRandom(i * 12.9898);
-    const h = 8 + r * barMaxH;
+    const h = 8 + r * 22;
     const w = r > 0.7 ? 4 : 2;
-    targetCtx.fillRect(x, y + 22 - h, w, h);
+    c.fillRect(x, y0 + 22 - h, w, h);
     x += w + 3;
   }
-  maxWidth = Math.max(maxWidth, x - x0);
+  maxW = Math.max(maxW, x - x0);
   y += 40;
 
-  // date, bold, left aligned
-  targetCtx.textAlign = 'left';
-  targetCtx.fillStyle = '#F5F5F0';
-  targetCtx.font = '700 30px "JetBrains Mono", monospace';
-  targetCtx.fillText(date, x0, y + 26);
-  maxWidth = Math.max(maxWidth, targetCtx.measureText(date).width);
+  // date
+  c.fillStyle = '#F5F5F0';
+  c.font = '700 30px "JetBrains Mono", monospace';
+  c.fillText(o.date, x0, y + 26);
+  maxW = Math.max(maxW, c.measureText(o.date).width);
   y += 44;
 
-  // yellow accent rule
-  targetCtx.fillStyle = '#FFD100';
-  targetCtx.fillRect(x0, y, 140, 3);
-  maxWidth = Math.max(maxWidth, 140);
+  // accent rule
+  c.fillStyle = '#FFD100';
+  c.fillRect(x0, y, 140, 3);
+  maxW = Math.max(maxW, 140);
   y += 26;
 
   // handle
-  targetCtx.fillStyle = '#FFD100';
-  targetCtx.font = '700 22px "JetBrains Mono", monospace';
-  targetCtx.fillText(handle, x0, y + 18);
-  maxWidth = Math.max(maxWidth, targetCtx.measureText(handle).width);
+  c.fillStyle = '#FFD100';
+  c.font = '700 22px "JetBrains Mono", monospace';
+  c.fillText(o.handle, x0, y + 18);
+  maxW = Math.max(maxW, c.measureText(o.handle).width);
   y += 32;
 
   // site
-  targetCtx.fillStyle = '#6B6B66';
-  targetCtx.font = '400 18px "JetBrains Mono", monospace';
-  targetCtx.fillText(site, x0, y + 16);
-  maxWidth = Math.max(maxWidth, targetCtx.measureText(site).width);
+  c.fillStyle = '#FFD100';
+  c.font = '400 18px "JetBrains Mono", monospace';
+  c.fillText(o.site, x0, y + 16);
+  maxW = Math.max(maxW, c.measureText(o.site).width);
   y += 30;
 
-  // optional binary easter egg, small, faint
-  if (showEgg) {
-    targetCtx.fillStyle = 'rgba(107, 107, 102, 0.6)';
-    targetCtx.font = '400 12px "JetBrains Mono", monospace';
-    const bin = toBinary('CYBER');
-    const words = bin.split(' ');
-    const line1 = words.slice(0, 3).join(' ');
-    const line2 = words.slice(3).join(' ');
-    targetCtx.fillText(line1, x0, y + 12);
-    targetCtx.fillText(line2, x0, y + 26);
-    maxWidth = Math.max(maxWidth, targetCtx.measureText(line1).width, targetCtx.measureText(line2).width);
-    y += 30;
+  // binary easter egg
+  if (o.egg) {
+    c.fillStyle = 'rgba(160,160,155,0.75)';
+    c.font = '400 12px "JetBrains Mono", monospace';
+    const words = toBinary('CYBER').split(' ');
+    const l1 = words.slice(0, 3).join(' '), l2 = words.slice(3).join(' ');
+    c.fillText(l1, x0, y + 12);
+    c.fillText(l2, x0, y + 26);
+    maxW = Math.max(maxW, c.measureText(l1).width);
+    y += 32;
   }
-
-  return { width: maxWidth, height: y - y0 };
+  return { width: maxW, height: y - y0 };
 }
 
-function currentOpts() {
-  return {
-    date: document.getElementById('date').value || '',
-    handle: document.getElementById('handle').value || '',
-    site: document.getElementById('site').value || '',
-    showEgg: document.getElementById('easterEgg').checked,
-  };
+function opts() {
+  return { date: $('date').value || '', handle: $('handle').value || '', site: $('site').value || '', egg: $('easterEgg').checked };
 }
 
 function render() {
-  ctx.clearRect(0, 0, W, H);
-  drawMark(ctx, marginLeft, marginTop, currentOpts());
+  const o = opts();
+  const scratch = document.createElement('canvas').getContext('2d');
+  scratch.canvas.width = 1400; scratch.canvas.height = 400;
+  const size = drawMark(scratch, PAD, PAD, o);
+  canvas.width = Math.ceil(size.width + PAD * 2);
+  canvas.height = Math.ceil(size.height + PAD * 2);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawMark(ctx, PAD, PAD, o);
 }
 
-function updateHint() {
-  const cropMode = document.getElementById('cropMode').checked;
-  document.getElementById('hintText').textContent = cropMode
-    ? 'Small transparent PNG cropped tight to the mark. Drag it in, resize, and place it wherever it needs to sit on your footage.'
-    : '1080×1920 canvas, transparent everywhere except the corner mark. Drop it into your editing app as an overlay layer above the whole clip, no need to trim or reposition per video.';
-}
+function toBlob(cv) { return new Promise(res => cv.toBlob(res, 'image/png')); }
 
-['date', 'handle', 'site', 'easterEgg'].forEach(id => {
-  document.getElementById(id).addEventListener('input', render);
-  document.getElementById(id).addEventListener('change', render);
-});
-document.getElementById('cropMode').addEventListener('change', updateHint);
-updateHint();
-
-if (document.fonts && document.fonts.load) {
-  Promise.all([
-    document.fonts.load("700 30px 'JetBrains Mono'")
-  ]).finally(render);
-} else {
+async function download() {
   render();
+  const blob = await toBlob(canvas);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `corner-mark-${opts().date}.png`;
+  document.body.appendChild(a); a.click(); a.remove();
+  $('outImg').src = url;
+  $('out').style.display = 'block';
+}
+
+['date','handle','site','easterEgg'].forEach(id => {
+  $(id).addEventListener('input', render);
+  $(id).addEventListener('change', render);
+});
+$('download').addEventListener('click', download);
+
+render();
+if (document.fonts && document.fonts.load) {
+  Promise.all([document.fonts.load('700 30px "JetBrains Mono"'), document.fonts.load('400 18px "JetBrains Mono"')]).finally(render);
 }
 setTimeout(render, 400);
-
-async function exportCanvasAsPng(sourceCanvas, filename) {
-  const blob = await new Promise(res => sourceCanvas.toBlob(res, 'image/png'));
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-async function downloadOverlay() {
-  const dateVal = document.getElementById('date').value.replace(/\./g, '-');
-  const cropMode = document.getElementById('cropMode').checked;
-
-  if (!cropMode) {
-    render(); // ensure latest state before export
-    await exportCanvasAsPng(canvas, `corner-overlay-${dateVal}.png`);
-    return;
-  }
-
-  // Crop export: measure first on a scratch canvas, then draw onto a
-  // canvas sized exactly to the mark plus a small padding border.
-  const pad = 20;
-  const scratch = document.createElement('canvas');
-  scratch.width = 1400; scratch.height = 400; // generous scratch space just to measure
-  const scratchCtx = scratch.getContext('2d');
-  const size = drawMark(scratchCtx, pad, pad, currentOpts());
-
-  const cropCanvas = document.createElement('canvas');
-  cropCanvas.width = Math.ceil(size.width + pad * 2);
-  cropCanvas.height = Math.ceil(size.height + pad * 2);
-  const cropCtx = cropCanvas.getContext('2d');
-  drawMark(cropCtx, pad, pad, currentOpts());
-
-  await exportCanvasAsPng(cropCanvas, `corner-mark-${dateVal}.png`);
-}
-document.getElementById('download').addEventListener('click', downloadOverlay);
 </script>
-
 </body>
 </html>
